@@ -56,25 +56,89 @@ def save(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
-def no_text_after_each_line(body):
-    """Repeat the no-subtitle rule right after every spoken line.
+def name_of(book, key):
+    """First clause of a cast entry — the character's name, for use mid-sentence."""
+    return book[key].split(",")[0].strip()
 
-    A single prohibition at the end of a long paragraph gets discounted: three of nine segments
-    came back with the model's own captions burned in. Restating it next to each <d> block is the
-    documented escalation for models with no negative-prompt field, which H3 does not have.
+
+def pronoun(book, key):
+    """(subject, possessive) read from the cast entry's own voice clause."""
+    entry = book[key]
+    if " she speaks" in entry or entry.startswith("she "):
+        return "she", "her"
+    if " he speaks" in entry or entry.startswith("he "):
+        return "he", "his"
+    return "they", "their"
+
+
+def render_beats(beats, in_frame, offscreen, book):
+    """Turn structured beats into one chronological paragraph with mouth discipline per line.
+
+    `beats` is a list of either {"action": "..."} or a spoken line:
+        {"say": "<key>", "text": "...", "manner": "...", "where": "on the right of the frame"}
+
+    For EVERY line this emits, explicitly, whose mouth moves and that nobody else's does. A plain
+    speaker label is not enough: the model will lip-sync whoever is most prominent on screen. It
+    put one father's dialogue in his son's mouth even with both of them in frame, and repeatedly
+    gave an off-screen speaker's words to the only visible face.
     """
-    return body.replace("</d>", "</d> (clean frame, no words on screen)")
+    ids = {k: f"S{i + 1}" for i, k in enumerate(dict.fromkeys(in_frame + offscreen))}
+    out = []
+    for b in beats:
+        if "action" in b:
+            out.append(b["action"])
+            continue
+        key = b["say"]
+        speaker, sid = name_of(book, key), ids.get(key, "S1")
+        subj, poss = pronoun(book, key)
+        others = [name_of(book, k) for k in in_frame if k != key]
+        quiet = ""
+        if others:
+            verb = "keeps" if len(others) == 1 else "keep"
+            noun = "mouth" if len(others) == 1 else "mouths"
+            quiet = f" {' and '.join(others)} {verb} their {noun} closed and completely still while {speaker} speaks."
+        manner = f", {b['manner']}" if b.get("manner") else ""
+        if key in in_frame:
+            where = f", {b['where']}," if b.get("where") else ""
+            out.append(f"{speaker} ({sid}){where} is the one speaking here: {speaker} visibly opens and "
+                       f"moves {poss} mouth in sync with the words and says{manner}: "
+                       f"<d>[Chinese] {b['text']}</d>.{quiet}")
+        else:
+            out.append(f"{speaker} ({sid}) is NOT visible in this frame. {speaker}'s voice comes from outside "
+                       f"the frame as an off-screen voiceover{manner}: <d>[Chinese] {b['text']}</d>. "
+                       f"Nobody visible on screen speaks this line.{quiet}")
+    return " ".join(out)
 
 
-def wrap(body, scene, cast_keys, continuing):
+def wrap(body, scene, in_frame, offscreen, continuing):
     book = cast_book()
-    who = " ".join(book[k] + "." for k in cast_keys)
-    body = no_text_after_each_line(body)
+    who = " ".join(book[k] + "." for k in in_frame + offscreen)
+    # A segment with no dialogue is the single worst thing you can ask for: of 21 wordless
+    # reaction-hold segments, all 21 came back with invented mumbled gibberish, which the model
+    # then burned in as garbled captions. Prefer giving every segment a real line. If a shot must
+    # be wordless, say so in these terms and check the result.
+    silence = ("" if "<d>" in body else
+               "THIS SHOT HAS NO DIALOGUE. Nobody speaks, nobody mumbles, nobody whispers. No human "
+               "voice of any kind is heard: no words, no syllables, no vocalisation, no humming, no "
+               "voiceover, no background chatter. Every mouth stays closed. Room tone and physical "
+               "sounds only. ")
+    # Everyone who is in the scene but out of shot. Being off-frame is not the same as having left:
+    # people kept walking back in through a door they never went out of.
+    elsewhere = ""
+    if offscreen:
+        names = " and ".join(name_of(book, k) for k in offscreen)
+        verb = "stays" if len(offscreen) == 1 else "stay"
+        elsewhere = (f" {names} {verb} in this same room throughout, just outside the edge of the frame, in the "
+                     f"position already established. Being out of shot does not mean leaving: nobody walks out, "
+                     f"and nobody comes back in through a door. ")
     # Extras walking in is the most common content failure: a group shot grew four extra figures
     # by its second half, and a bridge test invented a person present in neither source clip.
-    people = f"Exactly {len(cast_keys)} people appear in this shot and no one else; no extra students, no passers-by, nobody enters the background. "
+    total = len(in_frame) + len(offscreen)
+    people = (f"Exactly {len(in_frame)} people are visible in frame and no one else. "
+              f"Only {total} people exist in this scene at all. No extra figures, no passers-by, "
+              f"nobody walks into the background, nobody enters through a door unless this shot says so. ")
     # The cast block must appear in EVERY segment, continuations included: without it the model has
-    # only bare (S1)/(S2) ids and guesses voices, which once gave the female teacher a male voice.
+    # only bare (S1)/(S2) ids and guesses voices, which once gave a female character a male voice.
     head = ("Continue filming from this exact supplied frame, vertical portrait. The next moment of the same "
             f"unbroken take. Maintain the supplied frame's exact faces, hairstyles, costumes, object positions and lighting. {who} "
             if continuing else
@@ -85,10 +149,16 @@ def wrap(body, scene, cast_keys, continuing):
         "integrated_multimodal_description: [Shot 1] " + head + body
         + " Everything happens in exactly the order described, at a natural everyday pace like real people talking, "
         "with no long silent pauses. Finish all speech by half a second before the end. "
-        + people
+        + elsewhere + people + silence
         + "One continuous shot. No cuts, no crossfades, no transitions, no teleporting, no changing the set. "
-        "No captions, no subtitles, no logos, no writing. Natural, lively, believable acting.\n\n"
-        "overall_soundscape: Quiet continuous indoor room tone, distant schoolyard, footsteps and fabric movement, no music.\n\n"
+        # Burned-in captions appeared in 3 of 9 segments under a milder prohibition, sometimes as
+        # garbled characters. The delivered cut carries no subtitles at all, so this is absolute.
+        "CRITICAL: the picture contains no text whatsoever. No subtitles, no captions, no burned-in "
+        "dialogue, no karaoke text, no watermark, no logo, no letters or Chinese characters rendered "
+        "anywhere in the image. A completely clean frame with zero text. "
+        "Natural, lively, believable acting.\n\n"
+        "overall_soundscape: Quiet continuous room tone, faint distant outdoor ambience, footsteps and "
+        "fabric movement, no music.\n\n"
         "non_diegetic_music: N/A")
 
 
@@ -96,9 +166,13 @@ def generate(episode, plan, segment, index, image):
     ident = segment["id"]
     output = episode / f"{ident}.mp4"
     continuing = image is not None
+    in_frame = segment.get("in_frame", segment.get("cast", plan.get("cast", [])))
+    offscreen = segment.get("offscreen", [])
+    beats = segment["beats"]
+    body = beats if isinstance(beats, str) else render_beats(beats, in_frame, offscreen, cast_book())
     payload = {"task": "i2av" if continuing else "t2av",
-               "prompt": wrap(segment["beats"], segment.get("scene", plan.get("scene", "")),
-                              segment.get("cast", plan.get("cast", [])), continuing),
+               "prompt": wrap(body, segment.get("scene", plan.get("scene", "")),
+                              in_frame, offscreen, continuing),
                "seed": plan["seed"] + index, "num_frames": segment["frames"], "size": SIZE,
                "save_result_path": str(output)}
     if continuing:

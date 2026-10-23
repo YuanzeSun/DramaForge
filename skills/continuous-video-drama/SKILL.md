@@ -104,6 +104,58 @@ a pale blue cardigan over an ivory blouse; she speaks with a natural warm adult 
 Keep it in a `cast.json` the generator reads **fresh on every call**, so adding a character never
 requires restarting a long run.
 
+### Never ask for a silent segment
+
+[verified, and the most expensive single lesson here] Of 21 generated segments written with no
+dialogue — reaction holds, a push-in on a photograph, two people sitting wordlessly in a car —
+**all 21 came back with invented mumbled gibberish**, which the model then burned in as garbled
+on-screen captions. Not one held silence. The viewer experience is a scene that lapses into
+nonsense speech and then recovers when the next segment's real dialogue starts.
+
+Assume the model cannot do silence. Give every segment at least one real line, even a three-syllable
+mutter, a name, or something read aloud off a page; a wordless dramatic beat can usually carry a
+short line without losing anything. If a shot genuinely must be wordless, say so explicitly and
+exhaustively — "nobody speaks, nobody mumbles, no words, no syllables, no vocalisation, no humming,
+no voiceover, every mouth stays closed, room tone only" — and verify that one shot before trusting
+the pattern across a production.
+
+A machine check is worth having: transcribe every finished segment and compare it against the
+scripted lines. Segments with no scripted dialogue are the ones to inspect first, and a phonetic
+similarity below ~0.8 on the rest flags dropped or garbled lines.
+
+### Whose mouth moves — say it for every single line
+
+[verified] Naming the speaker is not enough. The model binds dialogue to whichever face is most
+prominent on screen, so lines land in the wrong mouth in two distinct ways:
+
+- An off-screen speaker's line is lip-synced by the only visible person. A coach's recruiting offer,
+  overheard through a doorway, came out of the student's mouth.
+- With **two people in frame**, the wrong one speaks. A father's ultimatum across a dinner table was
+  delivered by his son, who was sitting right there and silent in the script.
+
+The phrasing that survives both: for each line state, in the same sentence, that this named person
+is the one speaking, that they visibly open and move their mouth in sync with the words, and that
+every other named person keeps their mouth closed and completely still. For an off-screen line,
+state that the speaker is NOT visible in frame, that the voice comes from outside the frame, and
+that nobody visible speaks the line.
+
+This is mechanical boilerplate, so generate it rather than writing it by hand: keep dialogue as
+structured data (`{"say": key, "text": "..."}`) and have the generator emit the mouth discipline for
+every line. Hand-written prose will not stay consistent across hundreds of lines — and if you ever
+machine-extract speakers from prose, require a real speech cue next to the name. Matching the
+nearest name alone misattributed 68 of 321 lines, including picking up the literal word "Chinese"
+out of a `<d>[Chinese]` tag and treating it as a character.
+
+Check staging against the dialogue too: a segment that says one character speaks while describing
+only the other as visible is self-contradictory, and the model resolves it the wrong way.
+
+### Off-frame is not off-stage
+
+[verified] A character who walks out of frame is routinely treated as having left the building, and
+then walks back in through a door they never went out of. State it: the people who are off-frame
+remain in this same room, in the position already established, and nobody enters through a door
+unless the shot says so.
+
 ### Say who is being spoken to
 
 [verified] "Lu holds the card out toward Chen, who is off-screen right, and says: …" produced a man
@@ -296,13 +348,23 @@ screens, signage and notes should be composited as a small inset over the contin
 than a cut to a full-screen graphic.
 
 **The model may burn in its own subtitles anyway.** [verified] Three of nine segments came back
-with captions despite an explicit prohibition. [reported] Escalation hierarchy: use a real negative
-prompt field if the model has one (H3 does not — constraints must be plain sentences); place the
-constraint **immediately after the spoken line**, not at the end of a long paragraph; escalate
-phrasing from `no subtitles` to `clean frame, no words on screen, no burned-in text`; budget an
-inpainting text-remover as fallback. For Wan-family models keep the negative prompt **in Chinese**
-(`字幕` is the load-bearing token) and note negative prompts do nothing at CFG=1, so distilled
-4-step configs ignore them silently.
+with captions despite an explicit prohibition, and wordless segments burned in garbled captions of
+their own invented gibberish. [reported] Escalation hierarchy: use a real negative prompt field if
+the model has one (H3 does not — constraints must be plain sentences); escalate phrasing from
+`no subtitles` to `clean frame, no words on screen, no burned-in text`; budget an inpainting
+text-remover as fallback. For Wan-family models keep the negative prompt **in Chinese** (`字幕` is
+the load-bearing token) and note negative prompts do nothing at CFG=1, so distilled 4-step configs
+ignore them silently.
+
+One piece of the reported advice did **not** survive contact: inserting the prohibition immediately
+after each `</d>` tag. The spec says `<d>` holds only spoken words, so an English parenthetical
+butted against it is a plausible way to corrupt the speech stream. Transcribing segments generated
+with and without it showed no measurable difference in dialogue accuracy (0.98 vs 0.93 mean phonetic
+similarity, and every low score was digit normalisation like 四十秒 → "40秒"), and it did not stop the
+captions either. Prefer one forceful, exhaustive prohibition in its own sentence — "the picture
+contains no text whatsoever: no subtitles, no captions, no burned-in dialogue, no watermark, no
+letters or characters rendered anywhere, a completely clean frame with zero text" — and keep the
+dialogue stream clean.
 
 [reported] Post order: upscale → deflicker/denoise → LUT for a unified grade → frame interpolation
 at **1× only**. Mix dialogue ~6 dB above music; H3 output measured around −41 dB mean, so plan a
