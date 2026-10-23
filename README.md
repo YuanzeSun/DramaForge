@@ -16,6 +16,7 @@ skills/continuous-video-drama/   drop into ~/.claude/skills/ to install as a Cla
   scripts/stitch.py              cumulative review preview
   scripts/plan.schema.json       annotated segment-plan format
   scripts/audit_plans.py         flag the defects that shipped broken video
+  scripts/check_speech.py        transcribe finished segments against the script
 bin/
   launch_server.py               start one multi-card LightX2V server
   stop_server.sh                 stop it and free the accelerators
