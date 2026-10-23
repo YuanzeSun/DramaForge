@@ -98,7 +98,11 @@ def render_beats(beats, in_frame, offscreen, book):
             noun = "mouth" if len(others) == 1 else "mouths"
             quiet = f" {' and '.join(others)} {verb} their {noun} closed and completely still while {speaker} speaks."
         manner = f", {b['manner']}" if b.get("manner") else ""
-        if key in in_frame:
+        # A line may be off-screen even when its speaker is visible elsewhere in the segment, so the
+        # per-line flag wins. Getting this wrong told the model to frame one character alone and
+        # simultaneously that an absent one visibly moves her mouth; it resolved the contradiction
+        # by dragging her into shot, and every eyeline in the scene went with her.
+        if key in in_frame and not b.get("off"):
             where = f", {b['where']}," if b.get("where") else ""
             out.append(f"{speaker} ({sid}){where} is the one speaking here: {speaker} visibly opens and "
                        f"moves {poss} mouth in sync with the words and says{manner}: "
