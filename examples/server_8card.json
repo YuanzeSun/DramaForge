@@ -1,0 +1,51 @@
+{
+  "infer_steps": 8,
+  "num_frames": 175,
+  "size": [
+    1344,
+    768
+  ],
+  "fps": 24,
+  "enable_cfg": false,
+  "cpu_offload": false,
+  "offload_granularity": "model",
+  "use_adaln_cache": true,
+  "adaln_cache_dir": "/data/syz/models/.lightx2v/adaln",
+  "text_encoder_cpu_offload": true,
+  "text_encoder_offload_granularity": "block",
+  "text_encoder_host_pinned": false,
+  "text_encoder_tensor_parallel": true,
+  "vae_cpu_offload": true,
+  "vae_decode_parallel": true,
+  "attn_type": "npu_flash_attn",
+  "rms_type": "npu_rms_norm",
+  "rope_type": "torch_real_rope",
+  "feature_caching": "NoCaching",
+  "use_compile": false,
+  "warmup": false,
+  "video_flow_shift": 6.0,
+  "audio_flow_shift": 3.0,
+  "h3_step_update": "training_euler",
+  "vae_spatial_scale_factor": 16,
+  "audio_sampling_rate": 32000,
+  "keep_latents_dtype_in_scheduler": true,
+  "local_files_only": true,
+  "video_codec_options": {
+    "preset": "fast",
+    "crf": "18"
+  },
+  "lora_dynamic_apply": true,
+  "lora_configs": [
+    {
+      "path": "/data/syz/models/MiniMax-H3-Turbo/minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors",
+      "strength": 1.0,
+      "alpha": 8
+    }
+  ],
+  "parallel": {
+    "tensor_p_size": 4,
+    "seq_p_size": 2,
+    "seq_p_attn_type": "ulysses",
+    "seq_p_a2a_backend": "hccl_eager"
+  }
+}

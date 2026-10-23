@@ -1,0 +1,13 @@
+{
+  "_comment": "Segment plan for pipeline.py. Segments run strictly in order; each continues from the previous one's real last frame. Keep ids zero-padded and contiguous.",
+  "description": "one line describing this cut of the episode",
+  "segments": [
+    {
+      "id": "01",
+      "frames": 192,
+      "_frames": "MUST satisfy the model's quantisation. MiniMax-H3: num_frames % 17 == 5 (158/175/192/209/226...362). At 24fps that is ~6.5-9s. Assert this when building the plan.",
+      "beats": "One chronological paragraph. Action, then the line it triggers, then the reaction. Dialogue inline: Chen (S1) turns and says sharply: <d>[Chinese] 别碰。</d> Her hand stops. Lin (S2) says in an off-screen voiceover: <d>[Chinese] 抱歉。</d> while Chen's lips remain completely closed.",
+      "text_rule": "OPTIONAL. Override only when a prop must show text, e.g. 'No captions, no subtitles, no logos; the only on-screen text is \"今晚晴\" on the sticky note. ' Default forbids all writing."
+    }
+  ]
+}
