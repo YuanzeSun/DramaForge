@@ -3,3 +3,4 @@
 __pycache__/
 *.state.json
 EPISODE_DONE
+*.pyc
