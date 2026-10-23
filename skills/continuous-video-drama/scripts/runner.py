@@ -70,7 +70,7 @@ def wrap(body, scene, cast_keys, continuing):
     book = cast_book()
     who = " ".join(book[k] + "." for k in cast_keys)
     body = no_text_after_each_line(body)
-    # Extras walking in is the most common content failure: a group shot grew four extra students
+    # Extras walking in is the most common content failure: a group shot grew four extra figures
     # by its second half, and a bridge test invented a person present in neither source clip.
     people = f"Exactly {len(cast_keys)} people appear in this shot and no one else; no extra students, no passers-by, nobody enters the background. "
     # The cast block must appear in EVERY segment, continuations included: without it the model has

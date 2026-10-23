@@ -23,12 +23,13 @@ What does not work, in order of how tempting it is:
 
 1. **Generating shots independently from the same character reference, then cutting them
    together.** [verified] Faces and costumes stay roughly consistent; the set does not. The door
-   moves, the window changes, the telescope is a different telescope. A viewer reads every cut as
-   a scene change: *"片段拼接非常生硬，画面不是连续的，直接换幕了"*.
+   moves, the window changes, the furniture is different furniture. A viewer reads every cut as a
+   scene change — the review that killed this approach was "the joins are harsh, the picture isn't
+   continuous, it just jumps to another scene".
 2. **Patching existing clips with first-frame/last-frame bridges.** [verified] Give the model the
    end of clip A and the start of clip B and ask for the motion between them. It invents whatever
-   it needs to reconcile two incompatible spaces — in testing it panned to a blank wall, changed
-   the telescope, and added a student who existed in neither clip.
+   it needs to reconcile two incompatible spaces — in testing it panned to a blank wall, altered a
+   large prop, and added a person who existed in neither clip.
 3. **Crossfades and dissolves.** Hiding a discontinuity is not continuity. (Though see
    *Scene breaks* below — practitioners disagree about dissolves, and the disagreement is real.)
 
@@ -139,10 +140,11 @@ section is what lets the model improvise: heads turn, **extras walk through the 
 intended near-stasis evaporates. A six-block segment structure: subject & composition → material &
 light → **motion constraints** → camera → atmosphere → negative. Pin speed adjectives explicitly.
 
-[verified] Extra people appearing is the single most common content failure here: a pull-back for a
-three-person group shot added four or five students by the second half of the clip; a bridge test
-invented a student who was in neither source clip. Write "only these three people are in the room;
-no other students" and still expect to pick frames from the early part of the clip.
+[verified] Extra people appearing is the single most common content failure: a pull-back for a
+three-person group shot had grown four or five extra figures by the second half of the clip, and a
+bridge test invented a person present in neither source clip. State the count — "exactly three
+people appear in this shot and no one else; nobody enters the background" — and still expect to
+pick your frame from the early part of the clip.
 
 ### Counted beats, not verbs
 
@@ -167,12 +169,12 @@ close-up input — it forces the model to invent off-frame bodies and produces a
 
 ### If the camera cannot see it, do not write dialogue about it
 
-[verified] A sticky note on the telescope tube was referenced by four lines of dialogue. The
-framing cropped the tube out, so the note was never visible and an actor appeared to point at
-nothing and discuss it at length. Two regenerations with explicit "the note is clearly visible in
-the left-centre of the frame" did not fix it reliably. The fix was to **cut the prop from the
-script** — the scene became a short exchange about the telescope itself, visible in every frame,
-carrying the same plot beat in two lines.
+[verified] A small handwritten note stuck to a prop was referenced by four lines of dialogue. The
+framing cropped that part of the prop out, so the note was never visible and an actor appeared to
+point at nothing and discuss it at length. Two regenerations with explicit "the note is clearly
+visible in the left-centre of the frame" did not fix it reliably. The fix was to **cut the prop
+from the script** — the scene became a short exchange about the large object itself, visible in
+every frame, carrying the same plot beat in two lines.
 
 Before writing a prop into dialogue, check the incoming chain frame. If the object is not in it,
 either rewrite the beat around something that is, spend a segment re-framing onto the object, or

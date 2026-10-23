@@ -1,11 +1,11 @@
-# continuous-video-drama
+# Frame-chained narrative video
 
-Reusable toolkit for producing multi-minute narrative video from a script with a frame-chained AI
-video model (built against MiniMax-H3 served by LightX2V, but the structure ports to any backend
-with an image-to-video endpoint).
+Toolkit for producing multi-minute narrative video from a script with a frame-chained AI video
+model — built against MiniMax-H3 served by LightX2V, but the structure ports to any backend with an
+image-to-video endpoint.
 
-Not specific to any one production. For the Astro Chaos material — character sheets, episode plans,
-anchor frames, covers — see the companion repo `astro-chaos`.
+General-purpose: nothing here is tied to a particular production. Per-show material (character
+sheets, episode plans, anchor frames, covers) belongs in its own repo alongside this one.
 
 ## What's here
 
@@ -27,6 +27,10 @@ examples/
 `SKILL.md` is the actual content. The scripts are a working reference implementation of what it
 describes; read the skill first.
 
+All paths in this document are relative to this folder, so the folder can be renamed or moved
+freely. (`skills/continuous-video-drama/` keeps its name because a Claude Code skill's directory
+must match the `name:` in its frontmatter — rename both together or neither.)
+
 ## The one-paragraph version
 
 Generate each segment as image-to-video from the **previous segment's real last frame**. The set,
@@ -43,24 +47,25 @@ single segment, and let a human review the cumulative stitch while generation co
 npu-smi info          # or nvidia-smi
 
 # 1. one server across all cards
-bin/launch_server.py --devices 0,1,2,3,4,5,6,7 --config examples/server_8card.json --logdir /tmp/run
+./bin/launch_server.py --devices 0,1,2,3,4,5,6,7 --config examples/server_8card.json --logdir /tmp/run
 curl -s http://127.0.0.1:8001/v1/service/status     # wait for "idle"
 
-# 2. lay out a project
+# 2. lay out a project somewhere of your own
 mkdir -p ~/myshow/ep01
 cp skills/continuous-video-drama/scripts/{runner.py,stitch.py} ~/myshow/
 #    write ~/myshow/cast.json  -> {"alice": "<appearance>; she speaks with <voice>"}
 #    write ~/myshow/ep01/plan.json per scripts/plan.schema.json
 
 # 3. run it, with a deadline that also frees the cards
+TOOLKIT=$PWD
 cd ~/myshow
 DRAMA_ROOT=$PWD \
 DRAMA_DEADLINE=2026-10-24T08:00 \
-DRAMA_SHUTDOWN="/path/to/bin/stop_server.sh" \
+DRAMA_SHUTDOWN="$TOOLKIT/bin/stop_server.sh" \
   setsid nohup python -u runner.py >> runner.log 2>&1 &
 
 # 4. watch
-DRAMA_ROOT=~/myshow bin/status.sh
+DRAMA_ROOT=~/myshow $TOOLKIT/bin/status.sh
 ```
 
 Previews land at `epNN/epNN_<title>_01-NN.mp4` and are rewritten after each segment.
@@ -78,6 +83,7 @@ Previews land at `epNN/epNN_<title>_01-NN.mp4` and are rewritten after each segm
 | `DRAMA_SHUTDOWN` | unset | shell command run when the deadline stops the run |
 | `DRAMA_CROP` / `DRAMA_SCALE` | `756:1344:6:0` / `720:1280` | stitch crop and output size |
 | `DRAMA_FONT` | Droid Sans Fallback | CJK font for covers |
+| `DRAMA_PYTHON` | `python3` | interpreter `status.sh` shells out to |
 | `LIGHTX2V_ROOT` | `~/LightX2V` | LightX2V checkout |
 
 ## Porting to another machine

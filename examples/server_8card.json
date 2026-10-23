@@ -10,7 +10,7 @@
   "cpu_offload": false,
   "offload_granularity": "model",
   "use_adaln_cache": true,
-  "adaln_cache_dir": "/data/syz/models/.lightx2v/adaln",
+  "adaln_cache_dir": "/REPLACE/models/.lightx2v/adaln",
   "text_encoder_cpu_offload": true,
   "text_encoder_offload_granularity": "block",
   "text_encoder_host_pinned": false,
@@ -37,7 +37,7 @@
   "lora_dynamic_apply": true,
   "lora_configs": [
     {
-      "path": "/data/syz/models/MiniMax-H3-Turbo/minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors",
+      "path": "/REPLACE/models/MiniMax-H3-Turbo/minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors",
       "strength": 1.0,
       "alpha": 8
     }

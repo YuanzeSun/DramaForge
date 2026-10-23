@@ -86,7 +86,7 @@ if __name__ == "__main__":
     p.add_argument("--source", required=True)
     p.add_argument("--top", type=int, default=250, help="crop offset into the vertical frame")
     p.add_argument("--title", required=True)
-    p.add_argument("--latin", default="ASTRO CHAOS")
+    p.add_argument("--latin", default="", help="optional latin subtitle line")
     p.add_argument("--hook", default="")
     p.add_argument("--badge", default="")
     p.add_argument("--anchor", default="left", choices=["left", "right"])
