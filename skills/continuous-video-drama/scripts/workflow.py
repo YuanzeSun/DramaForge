@@ -275,6 +275,7 @@ def export_jobs(project, destination, episode=None):
             role = {"character": "authoritative identity and costume reference",
                     "scene": "authoritative set geometry and lighting reference",
                     "keyframe": "shot composition and end-state reference"}.get(project.assets[ref]["kind"], "visual reference")
+            role = asset.get("reference_roles", {}).get(ref, role)
             refs.append({"asset": ref, "path": str(path) if path else None, "role": role})
         jobs.append({"id": key, "kind": asset["kind"], "prompt": asset["prompt"], "references": refs,
                      "execution": "built-in image_gen", "transparent_background": False,

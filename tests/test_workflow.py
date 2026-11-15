@@ -180,6 +180,7 @@ class WorkflowTest(unittest.TestCase):
     def test_references_invalidate_consumers_and_export_in_order(self):
         manifest = read(self.project / "assets.json")
         manifest["assets"]["opening"]["references"] = ["ending"]
+        manifest["assets"]["opening"]["reference_roles"] = {"ending": "costume only; preserve the target identity"}
         write(self.project / "assets.json", manifest)
         import_asset(Project(self.project), "opening", self.root / "opening.png")
         Image.new("RGB", (64, 112), "yellow").save(self.root / "ending.png")
@@ -189,6 +190,8 @@ class WorkflowTest(unittest.TestCase):
         count = export_jobs(Project(self.project), self.root / "jobs.json")
         self.assertEqual(count, 1)
         self.assertEqual(read(self.root / "jobs.json")["jobs"][0]["id"], "opening")
+        self.assertEqual(read(self.root / "jobs.json")["jobs"][0]["references"][0]["role"],
+                         "costume only; preserve the target identity")
 
     def test_migration_creates_fresh_specs_without_modifying_source(self):
         src = self.root / "legacy"

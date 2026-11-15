@@ -44,6 +44,10 @@ graph. `prepare` orders prerequisites before consumers. `import-image` adds `pat
 use content-based filenames to preserve original bytes and existing takes. A keyframe whose aspect
 ratio differs from the intended frame by over 8% is rejected instead of silently cropping it.
 
+Use optional `reference_roles: {"asset_id": "costume only; do not copy this person's identity"}`
+to state a reference's exact purpose. `prepare` preserves these roles in exported jobs; a school
+uniform reference must not accidentally become an identity reference for another character.
+
 A plan has version 2, a title, an integer seed, optional default scene/cast and ordered `segments`.
 Each segment has an id, H3 frame count, `in_frame`, optional `offscreen`, chronological `beats`,
 and an explicit `start`. See `scripts/plan.schema.json` for the JSON Schema.
