@@ -61,6 +61,11 @@ Request no model-rendered subtitles or watermarks. Make important signage and ti
 exact text is required. GPT Image cover lettering can be inspected separately; do not assume video
 and image text capabilities are identical. Do not add subtitles to the user's delivery by default.
 
+If captions persist, repeated stronger prohibitions can still fail. A bounded comparison can use
+unquoted dialogue inside the audio tags (`quote_dialogue: false`) and a simple positive camera
+description (`picture_rule`). Check both the resulting picture and speech rather than assuming
+the change fixed either. Stop blind retries at the agreed attempt limit and report remaining defects.
+
 ## Human review and bounded repairs
 
 A cumulative preview exposes seams better than individual clips. Review identities and wardrobes,

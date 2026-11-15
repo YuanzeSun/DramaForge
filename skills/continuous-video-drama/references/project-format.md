@@ -59,6 +59,9 @@ and an explicit `start`. See `scripts/plan.schema.json` for the JSON Schema.
 - `camera` and staging directions belong in action beats; `scene` can override the plan default.
 - A dialogue beat uses `say`, `text`, optional `to`, `manner`, and `off` (per-line off-screen override).
 - `soundscape` and `music` optionally override audio instructions for that segment.
+- `quote_dialogue` defaults to true; false leaves spoken words directly inside the audio tags.
+  `picture_rule` can replace the default no-text sentence for a controlled prompting comparison.
+  Neither option guarantees that the video model will suppress burned-in captions; review output.
 
 There is no hidden text-to-video fallback: a missing keyframe blocks real rendering. `render
 --dry-run` emits inspectable payloads with unresolved `<asset:id>` placeholders and contacts no
