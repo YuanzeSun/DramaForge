@@ -68,7 +68,10 @@ and image text capabilities are identical. Do not add subtitles to the user's de
 If captions persist, repeated stronger prohibitions can still fail. A bounded comparison can use
 unquoted dialogue inside the audio tags (`quote_dialogue: false`) and a simple positive camera
 description (`picture_rule`). Check both the resulting picture and speech rather than assuming
-the change fixed either. Stop blind retries at the agreed attempt limit and report remaining defects.
+the change fixed either. Follow the current project policy for rerolls. When caption-free footage
+is required, regenerate the affected clip before continuing from its tail. An explicit waiver for
+an earlier episode does not waive later production. After repeated failures, change the shot
+strategy instead of blindly repeating the same request; report unresolved captions truthfully.
 
 ## Human review and bounded repairs
 
