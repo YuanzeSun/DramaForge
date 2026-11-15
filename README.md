@@ -21,6 +21,10 @@ Python exports image jobs and imports results. It does **not** impersonate the c
 silently call a separately billed image API. MiniMax requires a running compatible LightX2V server
 with a shared filesystem. The toolkit does not launch or stop accelerator services implicitly.
 
+`bin/launch_server.py` records the owning user, configuration, port and process start time.
+`bin/stop_server.sh --pidfile /path/to/server.pid` also finds owned inference/HTTP processes
+that moved into another session, without stopping unrelated servers.
+
 ## Use
 
 ```bash

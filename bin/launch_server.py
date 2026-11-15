@@ -10,6 +10,7 @@ Check the cards are actually free first (npu-smi info / nvidia-smi) — other us
 too. Stop it when the run ends: ./stop_server.sh. Generation finishing does not release the cards.
 """
 import argparse
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -41,5 +42,11 @@ with (logdir / f"{args.name}.log").open("a") as log:
                                env=env, cwd=str(LIGHTX2V), stdin=subprocess.DEVNULL,
                                stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
 (logdir / f"{args.name}.pid").write_text(f"{process.pid}\n")
+stat = Path(f"/proc/{process.pid}/stat").read_text()
+start_ticks = int(stat[stat.rfind(")") + 2:].split()[19])
+(logdir / f"{args.name}.meta.json").write_text(json.dumps({
+    "pid": process.pid, "uid": os.getuid(), "start_ticks": start_ticks,
+    "config": str(Path(args.config).resolve()), "port": str(args.port)
+}) + "\n")
 print(f"{process.pid}  ({nproc} cards, port {args.port}, log {logdir/args.name}.log)")
 print("model load takes a few minutes; poll /v1/service/status until it reports idle")
