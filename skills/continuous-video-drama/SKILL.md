@@ -16,6 +16,9 @@ refactor the workflow does not authorize rendering a season or rewriting its scr
 accepted scripts and takes. Preserve the user's output retention preferences; do not archive
 rejected material when they asked to delete it.
 
+Read a project's `production-policy.json` when present. If the user accepts model-generated
+captions, continue production without caption-specific review gates, removal or rerolls.
+
 For an existing project, inspect its current plans and media before changing them. Choose one
 canonical working project instead of keeping edited copies of runners in production folders.
 The self-contained CLI is `scripts/drama.py`; run `--help` to discover commands. It does not
