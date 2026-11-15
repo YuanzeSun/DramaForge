@@ -1,399 +1,153 @@
 ---
 name: continuous-video-drama
-description: Produce a multi-minute continuous narrative video (short drama, explainer, any dialogue scene) from a script using a frame-chained AI video model such as MiniMax-H3 on LightX2V. Use when the user asks for video longer than the model's single-clip limit, when separately generated shots look like unrelated scenes cut together, or when setting up a segment-by-segment generation pipeline on multi-GPU/NPU hardware.
+description: Produce and revise narrative video with GPT Image visual assets and MiniMax-H3 via LightX2V. Use for short dramas, script-to-shot planning, character and set continuity, keyframe preparation, video generation and targeted repairs. Supports deliberate coverage cuts and short within-shot continuations.
 ---
 
-# Continuous video drama
+# GPT Image + MiniMax narrative production
 
-A video model generates 5–15 seconds at a time. A drama needs minutes. The gap between those two
-facts is the whole problem, and almost every mistake below comes from solving it the
-obvious-but-wrong way.
+Use GPT Image to establish the visual world and supply shot keyframes. Use MiniMax-H3 for motion,
+acting, dialogue and native audio. Keep the screenplay, visual assets, shot plans and generated
+media separate. This skill does not require a particular story, accelerator or fixed shooting style.
 
-Findings are marked **[verified]** where this pipeline hit them directly, **[reported]** where they
-come from published practice. Verified beats reported when they conflict.
+## Start from the user's scope
 
-## The core method: frame chaining
+Distinguish workflow engineering, visual development and actual video production. A request to
+refactor the workflow does not authorize rendering a season or rewriting its screenplay. Preserve
+accepted scripts and takes. Preserve the user's output retention preferences; do not archive
+rejected material when they asked to delete it.
 
-**Generate segment N+1 as an i2av (image-to-audio-video) continuation of segment N's actual last
-frame.** Extract the final frame of each finished clip, pass it as `image_path` for the next
-request, and the room, faces, costumes and lighting carry forward because they are literally the
-same pixels.
+For an existing project, inspect its current plans and media before changing them. Choose one
+canonical working project instead of keeping edited copies of runners in production folders.
+The self-contained CLI is `scripts/drama.py`; run `--help` to discover commands. It does not
+start servers or generate images implicitly.
 
-What does not work, in order of how tempting it is:
+## The production loop
 
-1. **Generating shots independently from the same character reference, then cutting them
-   together.** [verified] Faces and costumes stay roughly consistent; the set does not. The door
-   moves, the window changes, the furniture is different furniture. A viewer reads every cut as a
-   scene change — the review that killed this approach was "the joins are harsh, the picture isn't
-   continuous, it just jumps to another scene".
-2. **Patching existing clips with first-frame/last-frame bridges.** [verified] Give the model the
-   end of clip A and the start of clip B and ask for the motion between them. It invents whatever
-   it needs to reconcile two incompatible spaces — in testing it panned to a blank wall, altered a
-   large prop, and added a person who existed in neither clip.
-3. **Crossfades and dissolves.** Hiding a discontinuity is not continuity. (Though see
-   *Scene breaks* below — practitioners disagree about dissolves, and the disagreement is real.)
+1. **Story and shot plan.** Treat the screenplay as an outline when the user permits adaptation.
+   Write chronological action/dialogue beats. Decide cast visibility, listener, screen direction,
+   props, opening state, closing state and camera movement for each shot.
+2. **Visual bible.** Establish character appearance/costume references and useful set masters
+   with GPT Image. Keep voices in `cast.json` and stable image references in `assets.json`.
+   Reuse the original approved references rather than repeatedly editing drifted images.
+3. **Shot keyframes.** Generate each new setup from those references. Establish geography,
+   eyelines, person count and important props in the picture before asking video to animate them.
+   A shot requiring a precise final state can have a separate end keyframe.
+4. **Video.** Submit an explicit episode to MiniMax-H3. Use image-to-video for an opening frame,
+   first/last-frame conditioning when both endpoints matter, and a previous clip's actual decoded
+   tail only for a continuation of the same setup. Preserve voices and shot constraints.
+5. **Review and repair.** Assemble a cumulative preview. Let the user review as production
+   continues unless they requested a review gate. Repair the earliest affected shot and its true
+   dependents; preserve accepted independent setups. Stop on unreadable output or failed tasks.
 
-Frame chaining costs parallelism: segment N+1 needs segment N finished. Spend the freed capacity on
-one larger server instead (see *Hardware*).
+Visual continuity comes from common identities, costumes, geography and editing decisions.
+Long frame chains are an option for an uninterrupted take; they are not the default structure for
+an entire episode. A motivated coverage cut or reverse angle is valid filmmaking. Do not ban cuts,
+force static cameras, or invent dialogue solely to satisfy limitations seen in an earlier run.
 
-### Chain length and drift
+## GPT Image execution and asset handoff
 
-Two distinct failures hide under "it degrades" [reported]:
+Use the available built-in `image_gen` tool by default. Consult the `imagegen` skill when available.
+No `OPENAI_API_KEY` is needed for this built-in path. This CLI prepares and imports files; a shell
+process cannot directly call the conversation's image tool. Do not claim fully unattended image
+generation from the Python CLI.
 
-- **Extension decay** — texture and colour degrade *within* a continuing shot, because each link
-  conditions on a re-encoded lossy render. Errors compound multiplicatively.
-- **Identity drift** — faces slowly change *across* shots. [verified: by segment 7–8 of a 9-segment
-  chain the teacher reads as a different, older actor than in segment 1.]
-
-Cures differ. Decay is cured by cutting rather than extending; drift is cured by re-grounding. The
-strictest published rule is **chain length of one — never extend an extension**; looser practice
-allows 2–3 links then a hard reset. This pipeline chains 8–10 segments and visibly pays for it.
-
-**Re-anchor from the original master, never from the drifted frame** [reported] — repairing a
-repaired frame accumulates new drift within 3–4 iterations. The hybrid worth trying: last frame →
-image-edit pass with the character master attached → use the repaired frame as the next input.
-Use a single-variable repair prompt: *"the master is the sole identity standard; everything is
-already correct except the face shape; fix only that; keep composition, scene, pose, costume and
-lighting unchanged; no redesign, no added accessories."* Fixing one defect at a time preserves what
-is already right better than rerolling.
-
-**Frame extraction hygiene** [reported]: don't take the literal final frame — many models end on a
-fade or a motion-blurred in-between. Seek ~0.1–0.5 s before the end (`ffmpeg -sseof -0.5`) and
-write a **lossless PNG at native resolution**; JPEG edge artifacts amplify downstream. (Checked on
-this pipeline's output: no end-of-clip fade, luminance stable, so the literal last frame was
-usable — but verify rather than assume.)
-
-## Writing a segment
-
-### Beats, not action-then-dialogue
-
-The single highest-value prompt change in this project. [verified] The first format described all
-the action, then listed dialogue at the end:
-
-```
-<action paragraph>  Chen says: <d>[Chinese] 别碰。</d>  Lin says: <d>[Chinese] 啊，抱歉抱歉。</d>
+```bash
+python scripts/drama.py --project /path/to/project prepare --episode ep01
+# Read project/image-jobs.json. Generate the prerequisite references before shot keyframes.
+# Use image_gen with each job's prompt and the relevant reference images.
+python scripts/drama.py --project /path/to/project import-image ep01_01_start /path/to/generated.png
+python scripts/drama.py --project /path/to/project check --episode ep01 --ready
 ```
 
-The model cannot tell which action goes with which line. The result was a boy saying "don't touch"
-to a teacher who was not reaching for anything, who *then* reached. Interleave instead — one
-chronological paragraph, each line sitting between the action before it and after it:
+`prepare` exports jobs in dependency order. A reference path may be empty until its prerequisite
+has been generated and imported; re-run `prepare` to obtain the current paths. For local reference
+images, inspect them before passing their paths to the built-in tool. Use the tool's actual supported
+arguments; prompts, references, transparency and output handoff are not interchangeable options.
+Save selected generated files into the project through `import-image`, never solely in a temporary
+or conversation-owned directory. Imports preserve the original bytes and record hashes/provenance.
 
+When repairing an image, state the edit target, each reference's role, the one requested change,
+and invariants: identity, costume, composition, set, lighting and props. Do not regenerate an
+entire shot when a small edit can preserve the accepted staging. Inspect the result before import.
+
+Use an API/CLI image path only if the user explicitly chooses it. Consult the installed `imagegen`
+skill's bundled CLI instructions instead of building a second API runner. Never silently substitute
+a model or assume that ChatGPT image access provides API billing or an API key.
+
+## Canonical project and commands
+
+```text
+project.json                 version 2; endpoint, native [height,width], fps, output root, style
+cast.json                    ordered character keys -> appearance and voice descriptions
+assets.json                  GPT image specs, reference dependencies and imported-file hashes
+assets/                      durable approved/reference image files
+episodes/epNN/plan.json      chronological shot plans (version 2)
+renders/<run>/epNN/           video requests, states, actual tail frames and preview.mp4
 ```
-Her hand reaches toward the note. Just before her finger touches it, Chen (S1) turns his head and
-says sharply: <d>[Chinese] 别碰。</d> Her hand stops in mid-air and pulls back without touching it.
-Lin (S2) says in an off-screen voiceover: <d>[Chinese] 啊，抱歉抱歉。</d> while Chen's lips remain
-completely closed.
+
+For a new project, use [references/project-format.md](references/project-format.md) and
+[scripts/plan.schema.json](scripts/plan.schema.json). For an existing version 1 project:
+
+```bash
+python scripts/drama.py migrate /path/to/current/production /path/to/empty/project
+python scripts/drama.py --project /path/to/project check
+python scripts/drama.py --project /path/to/project render --episode ep01 --dry-run
 ```
 
-Then append: *"Everything happens in exactly the order described."*
+Migration copies plans and cast, creates fresh image specs, and leaves all original scripts and
+media untouched. It does not import old provider images. Review generated image prompts and
+inherited staging before production; structural validation cannot prove visual correctness.
 
-### The frozen identity paragraph
+The first shot, a scene change and a coverage cut use `start: {"mode":"asset","asset":"id"}`.
+Within a setup, `start: {"mode":"continue"}` uses the previous clip's real last frame. An optional
+`end_asset` adds a pinned end state. Do not reuse the opening image as the end state by default:
+that can turn a natural action into an uncomfortable return-to-pose loop.
 
-**Every segment must carry the full description of every character in it, including a voice
-descriptor — continuations included.** [verified, the hard way] Carrying only the speaker ids
-`(S1)`/`(S2)` into continuation prompts, with descriptions only in the opening text-to-video
-segment, made the model guess voices: the female teacher spoke an entire scene **in a man's
-voice**. The description block belongs in the prompt for every segment, byte-identical each time
-[reported: a "frozen identity paragraph" with only the action lines changing]:
+Explicit production command, after checking the server and accelerator availability:
 
+```bash
+python scripts/drama.py --project /path/to/project render --episode ep01 --run take01   --deadline 2026-11-15T22:00+08:00 --preview-every
+python scripts/drama.py --project /path/to/project stitch --episode ep01 --run take01
+python scripts/drama.py --project /path/to/project status --run take01
 ```
-Lin Zhixia, a 24-year-old Chinese female teacher with shoulder-length straight black hair, wearing
-a pale blue cardigan over an ivory blouse; she speaks with a natural warm adult female Mandarin voice.
-```
 
-Keep it in a `cast.json` the generator reads **fresh on every call**, so adding a character never
-requires restarting a long run.
-
-### Never ask for a silent segment
-
-[verified, and the most expensive single lesson here] Of 21 generated segments written with no
-dialogue — reaction holds, a push-in on a photograph, two people sitting wordlessly in a car —
-**all 21 came back with invented mumbled gibberish**, which the model then burned in as garbled
-on-screen captions. Not one held silence. The viewer experience is a scene that lapses into
-nonsense speech and then recovers when the next segment's real dialogue starts.
-
-Assume the model cannot do silence. Give every segment at least one real line, even a three-syllable
-mutter, a name, or something read aloud off a page; a wordless dramatic beat can usually carry a
-short line without losing anything. If a shot genuinely must be wordless, say so explicitly and
-exhaustively — "nobody speaks, nobody mumbles, no words, no syllables, no vocalisation, no humming,
-no voiceover, every mouth stays closed, room tone only" — and verify that one shot before trusting
-the pattern across a production.
-
-A machine check is worth having: transcribe every finished segment and compare it against the
-scripted lines. Segments with no scripted dialogue are the ones to inspect first, and a phonetic
-similarity below ~0.8 on the rest flags dropped or garbled lines.
-
-### Whose mouth moves — say it for every single line
-
-[verified] Naming the speaker is not enough. The model binds dialogue to whichever face is most
-prominent on screen, so lines land in the wrong mouth in two distinct ways:
-
-- An off-screen speaker's line is lip-synced by the only visible person. A coach's recruiting offer,
-  overheard through a doorway, came out of the student's mouth.
-- With **two people in frame**, the wrong one speaks. A father's ultimatum across a dinner table was
-  delivered by his son, who was sitting right there and silent in the script.
-
-The phrasing that survives both: for each line state, in the same sentence, that this named person
-is the one speaking, that they visibly open and move their mouth in sync with the words, and that
-every other named person keeps their mouth closed and completely still. For an off-screen line,
-state that the speaker is NOT visible in frame, that the voice comes from outside the frame, and
-that nobody visible speaks the line.
-
-This is mechanical boilerplate, so generate it rather than writing it by hand: keep dialogue as
-structured data (`{"say": key, "text": "..."}`) and have the generator emit the mouth discipline for
-every line. Hand-written prose will not stay consistent across hundreds of lines — and if you ever
-machine-extract speakers from prose, require a real speech cue next to the name. Matching the
-nearest name alone misattributed 68 of 321 lines, including picking up the literal word "Chinese"
-out of a `<d>[Chinese]` tag and treating it as a character.
-
-Check staging against the dialogue too: a segment that says one character speaks while describing
-only the other as visible is self-contradictory, and the model resolves it the wrong way.
-
-### Off-frame is not off-stage
-
-[verified] A character who walks out of frame is routinely treated as having left the building, and
-then walks back in through a door they never went out of. State it: the people who are off-frame
-remain in this same room, in the position already established, and nobody enters through a door
-unless the shot says so.
-
-### Say who is being spoken to
-
-[verified] "Lu holds the card out toward Chen, who is off-screen right, and says: …" produced a man
-delivering his offer to the wrong person entirely — the viewer reads him as talking to whoever is
-on screen. Put both parties in frame and name the target inside the dialogue instruction:
-
-> Lu turns his back on Lin and crouches to the boy's eye level, so the camera frames Lu and Chen
-> together. Lu (S4) speaks **directly to Chen, looking at Chen's face the whole time**: …
-
-### Follow the model's prompt conventions
-
-MiniMax-H3 ships `docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md` and `..._ref_en.md` in the model
-directory. Read them. What mattered:
-
-- `<d>[Chinese] …</d>` wraps **only** the spoken words; speaker, delivery and action stay outside.
-- Stable speaker ids `(S1)`, `(S2)`, `(S3)` — assign once, reuse across the whole production.
-- For off-screen lines use the exact phrase **`says in an off-screen voiceover`**, then state
-  immediately that the on-screen character's lips remain closed. Without this the visible actor
-  lip-syncs someone else's dialogue. [verified]
-- On-screen text in double quotes: `a sticky note reading "今晚晴"`.
-- Three sections: `integrated_multimodal_description`, `overall_soundscape`, `non_diegetic_music`.
-- **Keep the spoken line in quotes on H3** [reported] — its native-audio guidance says unquoted
-  lines degrade to mumbled syllables. (Google's Veo docs advise the opposite, no quotes, to avoid
-  triggering text rendering. Resolve per model; don't port the convention blindly.)
-- **Prompt expansion is on by default and rewrites what you wrote** [reported]: it inserts
-  amplitude, speed, shot labels and timecodes whether or not you asked. Write amplitude and speed
-  yourself to keep the decision. Three actions joined with "then" came back as three real cuts —
-  always state "one continuous shot, no cuts" for a chained segment.
-
-### Motion constraints are load-bearing
-
-[reported, and consistent with what this pipeline saw] Omitting an explicit motion-constraint
-section is what lets the model improvise: heads turn, **extras walk through the background**,
-intended near-stasis evaporates. A six-block segment structure: subject & composition → material &
-light → **motion constraints** → camera → atmosphere → negative. Pin speed adjectives explicitly.
-
-[verified] Extra people appearing is the single most common content failure: a pull-back for a
-three-person group shot had grown four or five extra figures by the second half of the clip, and a
-bridge test invented a person present in neither source clip. State the count — "exactly three
-people appear in this shot and no one else; nobody enters the background" — and still expect to
-pick your frame from the early part of the clip.
-
-### Counted beats, not verbs
-
-[reported] "Actor walks across the room" → "Actor takes four steps to the window, pauses, and pulls
-the curtain in the final second." Same for environment: "a beautiful street at night" → "wet
-asphalt, zebra crossing, neon reflecting in puddles." This is a better expression of "prompt for
-brisk pacing" than any adjective.
-
-[verified] Pacing still needs stating outright. The first cut had 16 seconds of silence in 38
-seconds of footage, because the model inserted slow camera moves between lines. Add: *"brisk,
-natural everyday conversation like real people talking, each line starts right after the previous
-one, no long silent pauses"* and *"finish all speech by half a second before the end"* so the clip
-does not end mid-word. Post-production cannot recover that; only the prompt can.
-
-### Camera vocabulary
-
-[reported] Bracketed director tags — `[Push in] [Pull out] [Pan left/right] [Truck left/right]
-[Tracking shot] [Static shot]` — placed **immediately after the description they apply to**, not at
-the end. One move per clip; stacking them produces mush. Camera is static by default, but you must
-still write "static camera, locked shot" to stop slow drift. Don't prompt a wide move from a
-close-up input — it forces the model to invent off-frame bodies and produces anatomy errors.
-
-### If the camera cannot see it, do not write dialogue about it
-
-[verified] A small handwritten note stuck to a prop was referenced by four lines of dialogue. The
-framing cropped that part of the prop out, so the note was never visible and an actor appeared to
-point at nothing and discuss it at length. Two regenerations with explicit "the note is clearly
-visible in the left-centre of the frame" did not fix it reliably. The fix was to **cut the prop
-from the script** — the scene became a short exchange about the large object itself, visible in
-every frame, carrying the same plot beat in two lines.
-
-Before writing a prop into dialogue, check the incoming chain frame. If the object is not in it,
-either rewrite the beat around something that is, spend a segment re-framing onto the object, or
-composite it in post. Never hope.
-
-### Treat the script as a story outline
-
-[verified] Written dialogue is usually too formal and too slow when spoken by a generated actor:
-*"不用和剧本一句不差的拍……剧本只是大致故事线，可以改"*. Rewrite for speech — contractions,
-interruptions, filler, short replies; split one long formal line into two short exchanges. Keep the
-plot beats and the jokes, discard the phrasing. Also drop running gags the client dislikes
-*everywhere*, including callbacks in later episodes.
-
-[reported] Duanju conventions worth knowing as a band, not a spec: hook with the conflict in the
-first 3 seconds; a reversal roughly every 20 s; shot length 3–8 s; episodes 45–90 s; **single
-dialogue lines ≤15 Chinese characters**; convert narration into dialogue and action.
-
-## Frame counts and duration
-
-MiniMax-H3 requires `num_frames ≡ 5 (mod 17)` — 158, 175, 192, 209, 226 … up to 362. At 24 fps that
-is ~6.5–15 s. Assert this when building the plan; the server rejects anything else. Other models
-have their own quantisation — find it before writing the plan.
-
-[reported] Single shots beyond ~8 s drift regardless of technique, and timecodes are "a plan, not a
-guarantee" — a line scheduled at 3.5 s landed at 5.8–6.4 s. Give early lines early timecodes and
-keep preceding action brief.
-
-## Scene breaks: when a cut is correct
-
-Not every cut is a defect. The objection is to hard cuts *inside one continuous conversation*; a
-genuine change of time or place is ordinary editing. Give the segment a `new_scene` flag that
-restarts the chain with a text-to-video prompt and its own scene description.
-
-[reported] Chain when a slow push-in or held beat would make a cut obtrusive, or you need 2–3 more
-seconds of the same action. Cut when the beat runs past ~2× the model's comfortable clip length,
-when faces or hands are large in frame, or when you are already one extension deep. **Cut on
-action** — end A as the hand reaches the door, begin B with the door already moving.
-
-Transition style is genuinely contested: one camp says straight cuts only, because dissolves draw
-attention to the differences you are hiding; Chinese duanju practitioners recommend dissolves
-precisely *because* the overlap blurs small identity differences. Test both on your material.
-
-[reported] Also write a **screen-direction table** before generating (who moves left-to-right,
-who enters from which side) and treat an axis flip as a continuity defect to fix in one frame,
-not by regenerating the pair.
-
-## Pipeline design
-
-### Generate continuously, let the human review
-
-[verified] The strongest workflow instruction in this project: *"你把方法探索差不多后，可以不用反复
-检查了，你大部分时间浪费在检查上了；可以让我检查，然后你先继续下一步"*.
-
-- Finish segment N → immediately submit N+1 → **in parallel**, stitch 1..N into a cumulative
-  preview and report the path.
-- No speech recognition, dual-candidate generation or automated scoring. An earlier version
-  transcribed every clip with Whisper and compared pinyin similarity; it roughly doubled
-  wall-clock time and never caught a problem the human did not catch faster by watching.
-- Stop only for hard failures: task failed, file unreadable, server down.
-- On an interruption: cancel the in-flight task, archive rejected segments to `rejected/` (never
-  delete — they are the evidence for what the fix must change), fix the plan, restart from the
-  first bad segment.
-
-The cumulative preview matters more than per-segment files: continuity problems live at the seams.
-
-[reported] If you *do* review systematically, two gates are worth stealing: an A-grade rate below
-~30% of a batch means the prompt is the problem, not the volume; and failures should cluster in
-known weak spots (hands) rather than faces. Declare an attempt ceiling before starting — after 2–3
-failures change the approach rather than rerolling blind. Budget ~3 generations per usable shot.
-
-### Make everything resumable
-
-Write `<id>.request.json` and `<id>.state.json` beside every clip. On restart, skip any segment
-whose extracted frame already exists, and re-attach to a task still `processing` rather than
-submitting a duplicate. [verified] Restarts happen constantly — every interruption is one, and
-re-attach saved several completed-but-unclaimed renders here.
-
-Give long unattended runs a **deadline** and a per-segment budget, so the loop stops cleanly
-instead of being killed mid-render.
-
-### Caution when editing a running pipeline
-
-[verified] A running Python process holds the code it started with. Two classes of bug came from
-that: prompt-building fixes that silently did not apply until restart, and `pkill -f`/`pgrep -f`
-patterns **matching their own shell command line**, killing the wrong process and leaving the
-runner dead with the server still rendering. Match on an exact argv, or keep a pidfile.
-
-## Hardware
-
-Frame chaining is sequential, so per-segment throughput is what matters, not parallel jobs.
-
-- **One big server beats two small ones.** [verified] Two TP4 workers across 8 cards took ~390 s
-  per segment; one TP4×SP2 server across all 8 took ~120 s. The second worker was only useful for
-  generating two candidates of the same segment, which the client did not want.
-- Check attention heads divide by tensor-parallel size (MiniMax-H3 has 56 heads; TP4 and TP8 both
-  work). Combine tensor with sequence parallelism to use the remaining cards.
-- **Check who else is on the accelerators** before launching (`npu-smi info` / `nvidia-smi`).
-  A root-owned vLLM server appeared mid-project taking ~22 GB per card. Never kill another user's
-  job; ask, or fit alongside it.
-- An 8-step distillation LoRA cut inference ~3.5× with no visible quality loss at 768p. Read the
-  LoRA's own metadata for its `alpha` — this one wanted 8, while the widely-copied example config
-  used 128, which produced corrupted output until corrected.
-- Seeds: usable on local inference (LightX2V/ComfyUI). [reported] Hosted H3 exposes no seed
-  control, so every hosted rerun is a fresh take.
-
-## Assembly and post
-
-Stitch with a single ffmpeg `concat` filter, applying **one identical crop to every segment** —
-never a per-segment crop or zoom, which reintroduces the cut-to-cut feeling that frame chaining
-exists to avoid. Generate at native resolution (768×1344 here) and scale once at the end; don't
-call the upscaled output "native".
-
-Keep subtitles and composited text out of review previews; add them only to the final master and
-keep a clean master without them. Burned-in text cannot fix wrong audio — if a line is garbled,
-regenerate the segment.
-
-**All on-screen text goes in post.** [verified] Model-rendered Chinese is unreliable; phone
-screens, signage and notes should be composited as a small inset over the continuing shot rather
-than a cut to a full-screen graphic.
-
-**The model may burn in its own subtitles anyway.** [verified] Three of nine segments came back
-with captions despite an explicit prohibition, and wordless segments burned in garbled captions of
-their own invented gibberish. [reported] Escalation hierarchy: use a real negative prompt field if
-the model has one (H3 does not — constraints must be plain sentences); escalate phrasing from
-`no subtitles` to `clean frame, no words on screen, no burned-in text`; budget an inpainting
-text-remover as fallback. For Wan-family models keep the negative prompt **in Chinese** (`字幕` is
-the load-bearing token) and note negative prompts do nothing at CFG=1, so distilled 4-step configs
-ignore them silently.
-
-One piece of the reported advice did **not** survive contact: inserting the prohibition immediately
-after each `</d>` tag. The spec says `<d>` holds only spoken words, so an English parenthetical
-butted against it is a plausible way to corrupt the speech stream. Transcribing segments generated
-with and without it showed no measurable difference in dialogue accuracy (0.98 vs 0.93 mean phonetic
-similarity, and every low score was digit normalisation like 四十秒 → "40秒"), and it did not stop the
-captions either. Prefer one forceful, exhaustive prohibition in its own sentence — "the picture
-contains no text whatsoever: no subtitles, no captions, no burned-in dialogue, no watermark, no
-letters or characters rendered anywhere, a completely clean frame with zero text" — and keep the
-dialogue stream clean.
-
-[reported] Post order: upscale → deflicker/denoise → LUT for a unified grade → frame interpolation
-at **1× only**. Mix dialogue ~6 dB above music; H3 output measured around −41 dB mean, so plan a
-levelling pass. Limit to 3–4 distinct sounds.
-
-## Covers and titles
-
-With no image-generation tool, the video model *is* the image generator. [verified] Generate a
-short **silent** clip for the key art — a prompt with no dialogue at all also avoids the burned-in
-subtitles — then pick a frame and compose the cover with PIL. Draw all type in post. Check what CJK
-fonts actually exist: with only a regular weight available, synthesise weight with stroke
-rendering, and ask for a heavy font if the result needs to read as a poster.
-
-## Files
-
-- `scripts/pipeline.py` — frame-chained generation loop with resume and background stitching.
-  Edit `ENDPOINT`, `SIZE`, `SCENE` and the cast block for your model and scene.
-- `scripts/stitch.py` — cumulative preview assembly.
-- `scripts/plan.schema.json` — the segment plan format, annotated.
-
-The scripts assume a LightX2V-style HTTP API (`POST /v1/tasks/video/`, `GET /v1/tasks/{id}/status`,
-`DELETE /v1/tasks/{id}`). Swap the three request functions for another backend; the structure is
-unchanged.
-
-## Sources for the [reported] items
-
-MiniMax-H3 native audio guide (omniart.studio), H3 prompt measurements (fuser.studio), AI video
-extension quality loss (screenweaver.ai), keyframe consistency for AI short drama (seektik.com),
-Hailuo 3 prompt structure field notes (v2ex.com/t/1232829), Wan negative-prompt behaviour
-(WanGP issue 1631, ambienceai.com), Veo dialogue conventions (prompt-architects.com), Sora
-prompting guide (developers.openai.com), duanju shot/transition practice (bjxku.com, jxxy.net),
-iterative generative drift research (arXiv 2605.20476, 2607.15772, 2512.07328).
+An omitted deadline means a one-hour budget. Naive deadlines use Asia/Shanghai. The runner locks
+its output run, persists a task id immediately, reattaches pending tasks, and fingerprints prompts,
+input-image bytes, endpoint and continuation dependencies. It rejects changed inputs in the same
+run; use a new `--run` for a changed take. It does not blindly trust old `.last.png` files.
+For a targeted repair, fork a new run with
+`fork --episode ep01 --source take01 --run repair01 --from-segment 03`. It retains completed shots
+outside the affected continuation chain; then render the repair run. Reuse is still checked against
+the current inputs, so a changed retained setup is rejected rather than silently accepted.
+An uncertain submission outcome requires reconciling server tasks before retrying. Task timeout
+or deadline cancels an active task; an interrupted local process leaves its id available to resume.
+The runner does not automatically retry failed generations or move into another episode.
+
+Rendering finishing does not unload the server. Release only the server you own when the user
+has requested it; inspect ownership and the server process before stopping anything.
+
+## Directing and model constraints
+
+Read [references/directing.md](references/directing.md) for dialogue, eyelines, motion, audio and
+review practices. Keep these distinctions clear:
+
+- GPT Image specifies the still composition; MiniMax specifies how it changes over time.
+- Full appearance and voice descriptors belong in every video prompt. Speaker ids stay stable
+  across a project; do not derive them from a shot's cast order.
+- Bind each line to one mouth and, when relevant, a listener. Off-screen speakers stay off-screen
+  for that line; visible actors do not lip-sync it. Put speech only inside `<d>[Chinese] "..."</d>`.
+- A silent shot is allowed. Explicitly request room tone and no vocalisation, then review it for
+  invented speech. Do not rewrite the story merely to add a line.
+- MiniMax-H3 frames: 158..362 with `frames % 17 == 5`. LightX2V's `size` is **[height,width]**;
+  `[1344,768]` produces a 768x1344 portrait frame. Check the installed backend before porting.
+- Pictures do not guarantee identity or motion accuracy. Inspect faces, hands, eyelines, prop
+  state and joins; describe results as reviewed only when the media was actually viewed.
+- Keep review previews clean. Add subtitles, titles and sound finishing in post as requested.
+  GPT Image may generate cover art directly; there is no need to render a silent video for a cover.
+
+## Scope of bundled tools
+
+`scripts/drama.py`, `workflow.py`, `prompts.py`, and `video.py` implement the current workflow.
+`stitch.py`, `convert_beats.py`, `audit_plans.py`, and `check_speech.py` are optional standalone
+utilities for existing files; ASR is never required for ordinary production. `runner.py` points to
+the current CLI and cannot launch the superseded unattended loop.

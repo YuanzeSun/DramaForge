@@ -4,3 +4,6 @@ __pycache__/
 *.state.json
 EPISODE_DONE
 *.pyc
+renders/
+assets/
+image-jobs.json

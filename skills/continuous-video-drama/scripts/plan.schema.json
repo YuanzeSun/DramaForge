@@ -1,27 +1,182 @@
 {
-  "_comment": "Segment plan for runner.py. Segments run strictly in order; each continues from the previous one's real last frame unless marked new_scene. One plan.json per episode directory.",
-  "title": "episode title, used in the stitched preview filename",
-  "seed": 2700100,
-  "scene": "default scene description, used for text-to-video segments (episode openings and new_scene restarts)",
-  "cast": ["default cast keys for this episode, overridden per segment by in_frame"],
-  "opening": {"image": "OPTIONAL absolute path to a frame to chain the first segment from; omit for text-to-video"},
-  "segments": [
-    {
-      "id": "01",
-      "frames": 192,
-      "_frames": "MUST satisfy the model's quantisation. MiniMax-H3: num_frames % 17 == 5 (158/175/192/209/226...362). At 24fps that is ~6.5-15s.",
-      "new_scene": false,
-      "_new_scene": "true restarts the chain with text-to-video. Use for a real change of time or place; a hard cut there is correct editing. Never for a cut inside one continuous conversation.",
-      "scene": "OPTIONAL per-segment scene override, required when new_scene is true",
-      "in_frame": ["keys of everyone VISIBLE in this shot"],
-      "offscreen": ["keys of everyone present in the scene but outside the frame, including phone and voiceover speakers"],
-      "beats": [
-        {"action": "What happens, in chronological order. Counted beats beat verbs: 'takes four steps to the window, pauses, pulls the curtain in the final second' over 'walks to the window'."},
-        {"say": "cast key", "text": "spoken line, kept short", "manner": "OPTIONAL delivery, e.g. 'quietly'", "where": "OPTIONAL position in frame, e.g. 'on the right of the frame'"},
-        {"action": "The reaction the line causes. Dialogue must sit between the action before it and the action after it, never collected into a list at the end."}
-      ],
-      "_beats": "Do NOT write a segment with no spoken line: every wordless segment generated came back with invented gibberish. Do NOT open a segment on a line: early speech gets clipped, so lead with a beat of action.",
-      "text_rule": "OPTIONAL override of the no-text-in-image rule, for the rare shot where a prop must legibly show text. Default forbids all writing."
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dramaforge/plan-v2.schema.json",
+  "title": "DramaForge episode plan v2",
+  "type": "object",
+  "required": [
+    "version",
+    "seed",
+    "segments"
+  ],
+  "properties": {
+    "version": {
+      "const": 2
+    },
+    "title": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "scene": {
+      "type": "string"
+    },
+    "cast": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "frames",
+          "start",
+          "in_frame",
+          "beats"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "frames": {
+            "enum": [
+              158,
+              175,
+              192,
+              209,
+              226,
+              243,
+              260,
+              277,
+              294,
+              311,
+              328,
+              345,
+              362
+            ]
+          },
+          "start": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "asset"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "asset"
+                  },
+                  "asset": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "continue"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "end_asset": {
+            "type": "string"
+          },
+          "coverage_cut": {
+            "type": "boolean"
+          },
+          "new_scene": {
+            "type": "boolean"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "in_frame": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "offscreen": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "beats": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "action"
+                  ],
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "say",
+                    "text"
+                  ],
+                  "properties": {
+                    "say": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "to": {
+                      "type": "string"
+                    },
+                    "manner": {
+                      "type": "string"
+                    },
+                    "where": {
+                      "type": "string"
+                    },
+                    "off": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "soundscape": {
+            "type": "string"
+          },
+          "music": {
+            "type": "string"
+          }
+        }
+      }
     }
-  ]
+  }
 }

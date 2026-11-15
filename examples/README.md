@@ -1,3 +1,14 @@
+# Workflow example
+
+`project/` is a complete unrendered version 2 project with character/set references, an opening,
+a same-setup continuation and a deliberate coverage cut. Try:
+
+```bash
+python bin/drama.py --project examples/project check
+python bin/drama.py --project examples/project prepare --episode ep01
+python bin/drama.py --project examples/project render --episode ep01 --dry-run
+```
+
 # Example inference configs
 
 ## server_8card.json

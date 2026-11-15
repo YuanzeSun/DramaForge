@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "assets": {
+    "cast_alice": {
+      "kind": "character",
+      "references": [],
+      "prompt": "Natural character reference, Alice in a navy jacket, clear face, no text."
+    },
+    "cast_bo": {
+      "kind": "character",
+      "references": [],
+      "prompt": "Natural character reference, Bo in a grey shirt, clear face, no text."
+    },
+    "room": {
+      "kind": "scene",
+      "references": [],
+      "prompt": "Empty old classroom, window on the left, wooden desk at frame right, late afternoon light, no people or captions."
+    },
+    "opening": {
+      "kind": "keyframe",
+      "references": [
+        "cast_alice",
+        "cast_bo",
+        "room"
+      ],
+      "prompt": "Portrait 4:7 still of Alice at left and Bo at right in the reference classroom, facing each other across the desk, hands empty, mouths relaxed, no text."
+    },
+    "reverse": {
+      "kind": "keyframe",
+      "references": [
+        "cast_alice",
+        "cast_bo",
+        "room"
+      ],
+      "prompt": "Portrait 4:7 reverse angle of the same classroom exchange, preserve window and desk geography and the camera axis, Alice and Bo face each other, no text."
+    }
+  }
+}

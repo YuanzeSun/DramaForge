@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "title": "试拍",
+  "seed": 2700100,
+  "scene": "Old classroom in late afternoon.",
+  "segments": [
+    {
+      "id": "01",
+      "frames": 158,
+      "in_frame": [
+        "alice",
+        "bo"
+      ],
+      "offscreen": [],
+      "start": {
+        "mode": "asset",
+        "asset": "opening"
+      },
+      "beats": [
+        {
+          "action": "Alice puts her empty hands on the desk and looks at Bo."
+        },
+        {
+          "say": "alice",
+          "to": "bo",
+          "text": "明天还来吗？"
+        },
+        {
+          "say": "bo",
+          "to": "alice",
+          "text": "来啊。"
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "frames": 158,
+      "in_frame": [
+        "alice",
+        "bo"
+      ],
+      "start": {
+        "mode": "continue"
+      },
+      "beats": [
+        {
+          "action": "Bo nods slightly; Alice watches him."
+        },
+        {
+          "say": "alice",
+          "to": "bo",
+          "text": "那就说好了。"
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "frames": 158,
+      "coverage_cut": true,
+      "in_frame": [
+        "alice",
+        "bo"
+      ],
+      "start": {
+        "mode": "asset",
+        "asset": "reverse"
+      },
+      "beats": [
+        {
+          "action": "From the reverse angle, Bo smiles at Alice."
+        },
+        {
+          "say": "bo",
+          "to": "alice",
+          "text": "说好了。"
+        }
+      ]
+    }
+  ]
+}
