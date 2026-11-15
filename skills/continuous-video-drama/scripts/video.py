@@ -82,6 +82,7 @@ def render(project, episode, run, deadline=None, timeout=1200, preview=False, co
             directory.mkdir(parents=True, exist_ok=True)
             previous_input = None
             selected = plan["segments"][:count]
+            stitched_count = 0
             for index, s in enumerate(selected):
                 payload = compile_request(project, ep, plan, s, index, directory)
                 image_hashes = {k: file_hash(payload[k]) for k in ("image_path", "last_frame_path") if k in payload}
@@ -151,6 +152,10 @@ def render(project, episode, run, deadline=None, timeout=1200, preview=False, co
                 print(f"DONE {ep}/{s['id']} {output}", flush=True)
                 if preview:
                     stitch(project, ep, plan, run, index + 1)
+                    stitched_count = index + 1
+            if preview and stitched_count < len(selected):
+                # A repair can retain later independent shots; include them in the final preview.
+                stitch(project, ep, plan, run, len(selected))
             write(directory / "episode.json", {
                 "status": "completed" if len(selected) == len(plan["segments"]) else "sample_completed",
                 "completed_at": now().isoformat(), "plan_hash": digest(plan),

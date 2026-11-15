@@ -151,9 +151,12 @@ class WorkflowTest(unittest.TestCase):
         write(self.plan_path, self.plan)
         kept = fork_run(Project(self.project), "ep01", "original", "repair", "01")
         self.assertEqual(kept, ["03"])
-        render(Project(self.project), "ep01", "repair")
+        render(Project(self.project), "ep01", "repair", preview=True)
         self.assertEqual(len(posts), 5)  # repaired shot and its continuation, reused independent setup
         self.assertTrue((self.project / "renders/original/ep01/01.mp4").exists())
+        import av
+        with av.open(str(self.project / "renders/repair/ep01/preview.mp4")) as preview:
+            self.assertEqual(preview.streams.video[0].frames, 18)
 
     def test_uncertain_submission_never_automatically_resubmits(self):
         with patch("requests.post", side_effect=TimeoutError("lost acknowledgement")):
