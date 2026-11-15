@@ -177,6 +177,30 @@ class WorkflowTest(unittest.TestCase):
         state = read(self.project / "renders/deadline/ep01/01.state.json")
         self.assertEqual(state["status"], "cancelled")
 
+    def test_offscreen_voice_does_not_describe_a_visible_actor(self):
+        request = compile_request(Project(self.project), "ep01", self.plan,
+                                  self.plan["segments"][1], 1, self.root, dry=True)
+        self.assertIn("adult female Mandarin voice", request["prompt"])
+        self.assertIn("Alice (S1) says in an off-screen voiceover", request["prompt"])
+        self.assertNotIn("Chinese woman in blue", request["prompt"])
+
+    def test_native_assembly_preserves_source_video_pixels(self):
+        import av
+        self.fake_service()
+        subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "lavfi", "-i", "testsrc2=s=64x112:r=24", "-f", "lavfi", "-i", "anullsrc=r=32000:cl=mono",
+            "-t", "0.25", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+            str(self.root / "synthetic.mp4")], check=True)
+        project = Project(self.project)
+        render(project, "ep01", "native")
+        project.config["delivery_mode"] = "native_video"
+        preview = stitch(project, "ep01", self.plan, "native")
+        with av.open(str(self.root / "synthetic.mp4")) as source:
+            expected = [f.to_image().tobytes() for f in source.decode(video=0)]
+        with av.open(str(preview)) as result:
+            actual = [f.to_image().tobytes() for f in result.decode(video=0)]
+        self.assertEqual(actual, expected + expected)
+
     def test_missing_images_and_bad_frames_block_before_network(self):
         self.plan["segments"][0]["frames"] = 159
         write(self.plan_path, self.plan)

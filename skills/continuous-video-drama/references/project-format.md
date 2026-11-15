@@ -23,6 +23,10 @@ It does not upload input images to an arbitrary remote machine.
 Optional `crop` and `scale` are ffmpeg expressions applied uniformly during assembly. The runner
 uses the server's configured fps; set the server to match `fps` (24 for the provided H3 example).
 
+For native-quality delivery, set `delivery_mode: "native_video"`. Matching source video streams
+are copied into the assembled MP4 without resizing or video re-encoding; audio is leveled and
+encoded separately. This mode requires identical source codecs, dimensions and frame rates.
+
 `cast.json` is an ordered object of stable ids to descriptions, for example
 `{"alice":"Alice, ...; she speaks with a warm adult female Mandarin voice"}`. Insertion order assigns
 `S1`, `S2`, etc. Append new characters without reordering established entries.

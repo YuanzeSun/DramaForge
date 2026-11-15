@@ -210,6 +210,29 @@ def stitch(project, ep, plan, run, count=None):
     if any(not p.is_file() for p in paths):
         raise ValueError("Render all requested segments before stitching")
     n = len(paths)
+    if project.config.get("delivery_mode") == "native_video":
+        import av
+        signatures = []
+        for path in paths:
+            with av.open(str(path)) as source:
+                stream = source.streams.video[0]
+                signatures.append((stream.codec_context.name, stream.width, stream.height, stream.average_rate))
+        if len(set(signatures)) != 1:
+            raise ValueError("Native video assembly requires matching codecs, dimensions and frame rates")
+        listing = directory / ".native-concat.ffconcat"
+        listing.write_text("ffconcat version 1.0\n" + "".join(
+            "file '" + str(path.resolve()).replace("'", "'\\''") + "'\n" for path in paths))
+        dest, temp = directory / "preview.mp4", directory / "preview.tmp.mp4"
+        try:
+            subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y",
+                "-f", "concat", "-safe", "0", "-i", str(listing), "-map", "0:v:0", "-map", "0:a:0",
+                "-c:v", "copy", "-af", "dynaudnorm=f=150:g=15:p=0.9,alimiter=limit=0.95,aresample=48000",
+                "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(temp)], check=True)
+            temp.replace(dest)
+        finally:
+            listing.unlink(missing_ok=True)
+        print(f"PREVIEW_NATIVE {dest}", flush=True)
+        return dest
     inputs = [arg for path in paths for arg in ("-i", str(path))]
     h, w = project.config.get("size", [1344, 768])
     scale = project.config.get("scale", f"{w}:{h}")

@@ -37,7 +37,13 @@ def dialogue(beats, visible, offscreen, book, speaker_ids, quoted=True):
 
 def video_prompt(project, plan, segment, chained=False):
     visible, off = segment.get("in_frame", []), segment.get("offscreen", [])
-    who = " ".join(f"{project.cast[k]} ({project.speakers[k]})." for k in dict.fromkeys(visible + off))
+    who = " ".join(f"{project.cast[k]} ({project.speakers[k]})." for k in dict.fromkeys(visible))
+    # Describe off-screen speakers as sound only. Their full appearance/costume block can
+    # otherwise prompt the model to insert a background actor who is meant to stay unseen.
+    speaking_off = [k for k in dict.fromkeys(off) if any(b.get("say") == k for b in segment["beats"])]
+    for key in speaking_off:
+        voice = project.cast[key].partition(";")[2].strip() or "a natural off-screen voice"
+        who += f" Off-screen AUDIO ONLY: {name(project.cast, key)} ({project.speakers[key]}), {voice}."
     head = ("Continue the next moment from the previous clip's actual final frame, with no cut. " if chained
             else "Begin exactly at the supplied opening keyframe. ")
     head += "Preserve the supplied face identities, costumes, set geometry, lighting and prop positions. "
@@ -53,9 +59,9 @@ def video_prompt(project, plan, segment, chained=False):
     if not any("say" in b for b in segment["beats"]):
         silence = "No speech, murmuring, whispers, singing or vocalisations. Closed mouths, physical sounds and room tone only. "
     elsewhere = ""
-    if off:
-        elsewhere = ("Off-screen voices and characters: " + ", ".join(name(project.cast, k) for k in off)
-                     + ". Follow the scripted locations; leaving the frame does not imply leaving the room. ")
+    if speaking_off:
+        elsewhere = ("Voices outside this camera view: " + ", ".join(name(project.cast, k) for k in speaking_off)
+                     + ". Keep these speakers outside the image; no visible person lip-syncs their lines. ")
     return ("For the target video, at 0.00 seconds, <Picture 1> is fully referenced.\n\n"
             "integrated_multimodal_description: [Shot 1] " + project.config.get("style", "Live-action drama.")
             + " " + segment.get("scene", plan.get("scene", "")) + " " + head + who + " " + body + " "

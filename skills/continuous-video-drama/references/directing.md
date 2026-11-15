@@ -24,6 +24,10 @@ face, shoulders and gaze toward the listener. For an off-screen line, state that
 visible and that the visible characters keep their mouths closed. Never place an off-screen
 speaker in the keyframe just to make the audio prompt easier.
 
+Keep visual appearance descriptions limited to visible characters. For a truly off-screen speaker,
+use their name and voice descriptor only; do not repeat their face, hairstyle and costume as if
+they should be rendered in the background. A silent person outside the crop needs no visual block.
+
 Maintain an axis table when several angles share a room: who stands on which side, where each
 looks, and which doorway each uses. Exiting the crop is different from exiting the room.
 Important props must exist in the opening frame, with a plausible hand/owner/state. Never refer
