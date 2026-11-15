@@ -36,7 +36,7 @@ def compile_request(project, ep, plan, segment, index, directory, dry=False):
              else image(start["asset"]))
     payload = {"task": "fl2av" if segment.get("end_asset") else "i2av",
         "prompt": video_prompt(project, plan, segment, chained), "image_path": first,
-        "seed": plan["seed"] + index, "num_frames": segment["frames"],
+        "seed": segment.get("seed", plan["seed"] + index), "num_frames": segment["frames"],
         "size": project.config.get("size", [1344, 768]),
         "save_result_path": str(directory / (segment["id"] + ".mp4"))}
     if segment.get("end_asset"):

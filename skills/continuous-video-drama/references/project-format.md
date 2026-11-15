@@ -60,6 +60,9 @@ and an explicit `start`. See `scripts/plan.schema.json` for the JSON Schema.
 - `start: {"mode":"continue"}` extends the preceding clip from its actual decoded final frame.
 - `end_asset: "end_pose"` optionally supplies `last_frame_path` and selects `fl2av`.
 - `coverage_cut: true` or `new_scene: true` requires an asset start.
+- Optional integer `seed` overrides the episode seed plus segment index for this shot only.
+  For a targeted reroll, change that shot's seed and fork from it into a new run; independent
+  retained setups keep their existing inputs, while true continuations follow the new tail.
 - `camera` and staging directions belong in action beats; `scene` can override the plan default.
 - A dialogue beat uses `say`, `text`, optional `to`, `manner`, and `off` (per-line off-screen override).
 - `soundscape` and `music` optionally override audio instructions for that segment.

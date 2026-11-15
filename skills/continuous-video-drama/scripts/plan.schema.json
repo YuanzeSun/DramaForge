@@ -61,6 +61,9 @@
               362
             ]
           },
+          "seed": {
+            "type": "integer"
+          },
           "start": {
             "oneOf": [
               {

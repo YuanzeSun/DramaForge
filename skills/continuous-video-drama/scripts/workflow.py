@@ -118,6 +118,8 @@ def validate(project, episode=None, ready=False, segment_count=None):
         for index, s in enumerate(plan["segments"]):
             sid = identifier(s["id"])
             label = f"{name}/{sid}"
+            if "seed" in s and type(s["seed"]) is not int:
+                errors.append(f"{label}: seed override must be an integer")
             if sid in seen:
                 errors.append(f"{label}: duplicate segment id")
             seen.add(sid)
