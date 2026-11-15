@@ -19,9 +19,11 @@ rejected material when they asked to delete it.
 Read a project's `production-policy.json` when present. If the user accepts model-generated
 captions, continue production without caption-specific review gates, removal or rerolls.
 If the user requires caption-free footage, inspect every new clip for burned-in captions before
-extending its continuation chain. Regenerate a captioned clip under that policy; preserve clean
-independent shots and earlier episodes the user explicitly exempted. If repeated attempts fail,
-change the prompt or shot strategy and report any unresolved captions truthfully.
+accepting it. Follow the requested review timing: when the user wants the next clip started first,
+generate it while inspecting the preceding clip; if that preceding clip fails, cancel and discard
+the speculative successor, repair the failed clip, then continue. Preserve clean independent
+shots and earlier episodes the user explicitly exempted. If repeated attempts fail, change the
+prompt or shot strategy and report unresolved captions truthfully.
 When the user requests one current version per episode, publish to a stable `episodes/epNN.mp4`
 path and retain one current working set. After verifying the replacement, delete superseded
 masters and trial/repair run directories as requested; do not leave duplicate dated deliveries.
