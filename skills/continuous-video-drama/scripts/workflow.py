@@ -81,7 +81,7 @@ def asset_spec_hash(asset):
     return digest({k: asset.get(k) for k in ("kind", "prompt", "references")})
 
 
-def validate(project, episode=None, ready=False):
+def validate(project, episode=None, ready=False, segment_count=None):
     """Validate a production plan without requiring video dependencies or a running server."""
     errors = []
     size = project.config.get("size", [1344, 768])
@@ -134,7 +134,7 @@ def validate(project, episode=None, ready=False):
             for key in [start.get("asset"), s.get("end_asset")]:
                 if key and key not in project.assets:
                     errors.append(f"{label}: unknown asset {key}")
-                elif key and ready:
+                elif key and ready and (segment_count is None or index < segment_count):
                     try:
                         project.asset_path(key)
                     except ValueError as exc:

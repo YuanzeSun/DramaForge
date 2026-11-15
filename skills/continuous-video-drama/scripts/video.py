@@ -59,10 +59,12 @@ def extract_last(output):
     return dest
 
 
-def render(project, episode, run, deadline=None, timeout=1200, preview=False):
+def render(project, episode, run, deadline=None, timeout=1200, preview=False, count=None):
     import fcntl
     import requests
-    validate(project, episode, ready=True)
+    if count is not None and count < 1:
+        raise ValueError("count must be positive")
+    validate(project, episode, ready=True, segment_count=count)
     end = deadline_at(deadline)
     endpoint = project.config.get("endpoint", "http://127.0.0.1:8001").rstrip("/")
     root = project.output / run
@@ -74,10 +76,13 @@ def render(project, episode, run, deadline=None, timeout=1200, preview=False):
         except BlockingIOError:
             raise ValueError(f"Another runner owns {root}")
         for ep, plan in project.plans(episode):
+            if count is not None and count > len(plan["segments"]):
+                raise ValueError("count exceeds the episode's segment count")
             directory = root / ep
             directory.mkdir(parents=True, exist_ok=True)
             previous_input = None
-            for index, s in enumerate(plan["segments"]):
+            selected = plan["segments"][:count]
+            for index, s in enumerate(selected):
                 payload = compile_request(project, ep, plan, s, index, directory)
                 image_hashes = {k: file_hash(payload[k]) for k in ("image_path", "last_frame_path") if k in payload}
                 semantic_payload = {k: v for k, v in payload.items()
@@ -146,8 +151,10 @@ def render(project, episode, run, deadline=None, timeout=1200, preview=False):
                 print(f"DONE {ep}/{s['id']} {output}", flush=True)
                 if preview:
                     stitch(project, ep, plan, run, index + 1)
-            write(directory / "episode.json", {"status": "completed", "completed_at": now().isoformat(),
-                "plan_hash": digest(plan), "segments": len(plan["segments"])})
+            write(directory / "episode.json", {
+                "status": "completed" if len(selected) == len(plan["segments"]) else "sample_completed",
+                "completed_at": now().isoformat(), "plan_hash": digest(plan),
+                "segments": len(selected), "total_segments": len(plan["segments"])})
     return True
 
 

@@ -123,6 +123,10 @@ An uncertain submission outcome requires reconciling server tasks before retryin
 or deadline cancels an active task; an interrupted local process leaves its id available to resume.
 The runner does not automatically retry failed generations or move into another episode.
 
+For a bounded trial, add `render --count 2 --preview-every`. Only the first two clips are rendered;
+later image dependencies may remain ungenerated. A partial run is recorded as `sample_completed`,
+so a trial cannot silently mark the whole episode finished.
+
 Rendering finishing does not unload the server. Release only the server you own when the user
 has requested it; inspect ownership and the server process before stopping anything.
 

@@ -106,6 +106,7 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(pixel[1], 30)
         self.assertTrue(render(Project(self.project), "ep01", "test"))
         self.assertEqual(len(posts), 2)
+
         preview = stitch(Project(self.project), "ep01", self.plan, "test")
         self.assertGreater(preview.stat().st_size, 0)
         self.plan["segments"][0]["beats"][1]["text"] = "再见。"
@@ -113,6 +114,20 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inputs changed"):
             render(Project(self.project), "ep01", "test")
         self.assertEqual(len(posts), 2)
+
+    def test_bounded_sample_stops_and_does_not_require_later_keyframes(self):
+        manifest = read(self.project / "assets.json")
+        manifest["assets"]["later_pending"] = {"kind": "keyframe", "prompt": "Later shot", "references": []}
+        write(self.project / "assets.json", manifest)
+        self.plan["segments"][1]["end_asset"] = "later_pending"
+        write(self.plan_path, self.plan)
+        posts = self.fake_service()
+        self.assertTrue(render(Project(self.project), "ep01", "sample", count=1))
+        self.assertEqual(len(posts), 1)
+        meta = read(self.project / "renders/sample/ep01/episode.json")
+        self.assertEqual(meta["status"], "sample_completed")
+        self.assertEqual(meta["segments"], 1)
+        self.assertEqual(meta["total_segments"], 2)
 
     def test_inflight_task_reattaches(self):
         posts = self.fake_service()

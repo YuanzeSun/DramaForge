@@ -30,6 +30,7 @@ def main(argv=None):
     command.add_argument("--timeout", type=int, default=1200, help="per-task wall time in seconds")
     command.add_argument("--dry-run", action="store_true")
     command.add_argument("--preview-every", action="store_true")
+    command.add_argument("--count", type=int, help="render only the first N segments for a bounded sample")
     command = commands.add_parser("stitch")
     command.add_argument("--episode", required=True)
     command.add_argument("--run", default="main")
@@ -62,15 +63,18 @@ def main(argv=None):
             from video import compile_request, render
             if args.timeout <= 0:
                 raise ValueError("--timeout must be positive")
+            if args.count is not None and args.count < 1:
+                raise ValueError("--count must be positive")
             if args.dry_run:
                 import json
                 validate(project, args.episode)
                 for ep, plan in project.plans(args.episode):
                     directory = project.output / args.run / ep
-                    for i, s in enumerate(plan["segments"]):
+                    for i, s in enumerate(plan["segments"][:args.count]):
                         print(json.dumps(compile_request(project, ep, plan, s, i, directory, dry=True), ensure_ascii=False))
             else:
-                return 0 if render(project, args.episode, args.run, args.deadline, args.timeout, args.preview_every) else 2
+                return 0 if render(project, args.episode, args.run, args.deadline, args.timeout,
+                                   args.preview_every, args.count) else 2
         elif args.command == "stitch":
             from video import stitch
             if args.count is not None and args.count < 1:

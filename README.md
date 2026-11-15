@@ -57,6 +57,8 @@ New projects can use the examples and format reference directly.
 - Rendering requires an explicit episode. Default runtime budget is one hour; a deadline without
   an offset uses Asia/Shanghai. A deadline/timeout cancels the active task; it does not unload the
   accelerator server. Stop only a service you own after production.
+- Add `render --count 2` for a two-segment sample. Later missing keyframes do not block the sample,
+  and its metadata records `sample_completed` rather than marking the full episode complete.
 - Previews contain no added subtitles and apply one uniform crop/scale and audio leveling pass.
   Rejected-output retention follows the user's instruction; no mandatory archive is created.
 
