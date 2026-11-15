@@ -18,6 +18,9 @@ rejected material when they asked to delete it.
 
 Read a project's `production-policy.json` when present. If the user accepts model-generated
 captions, continue production without caption-specific review gates, removal or rerolls.
+When the user requests one current version per episode, publish to a stable `episodes/epNN.mp4`
+path and retain one current working set. After verifying the replacement, delete superseded
+masters and trial/repair run directories as requested; do not leave duplicate dated deliveries.
 
 For an existing project, inspect its current plans and media before changing them. Choose one
 canonical working project instead of keeping edited copies of runners in production folders.
