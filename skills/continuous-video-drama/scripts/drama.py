@@ -42,12 +42,18 @@ def main(argv=None):
     command.add_argument("--from-segment", required=True)
     command = commands.add_parser("status", help="show registered images and tasks without contacting the server")
     command.add_argument("--run", default="main")
+    command = commands.add_parser("cover", help="export one pixel-verified PNG crop from GPT Image artwork")
+    from covers import add_arguments
+    add_arguments(command)
     args = parser.parse_args(argv)
     try:
         if args.command == "migrate":
             plans, assets = migrate(args.source, args.destination)
             print(f"MIGRATED {plans} episodes, {assets} image specifications -> {Path(args.destination).resolve()}")
             return 0
+        if args.command == "cover":
+            from covers import run
+            return run(args)
         project = Project(args.project)
         if hasattr(args, "run"):
             identifier(args.run)

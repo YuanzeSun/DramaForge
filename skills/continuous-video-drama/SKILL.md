@@ -1,6 +1,6 @@
 ---
 name: continuous-video-drama
-description: Produce and revise narrative video with GPT Image visual assets and MiniMax-H3 via LightX2V. Use for short dramas, script-to-shot planning, character and set continuity, keyframe preparation, video generation and targeted repairs. Supports deliberate coverage cuts and short within-shot continuations.
+description: Produce and revise narrative video with GPT Image assets and MiniMax-H3 via LightX2V. Use for short-drama planning, cast/set continuity, keyframes, video generation, targeted repairs and requested covers or release packaging. Supports coverage cuts and short continuations.
 ---
 
 # GPT Image + MiniMax narrative production
@@ -55,6 +55,10 @@ Visual continuity comes from common identities, costumes, geography and editing 
 Long frame chains are an option for an uninterrupted take; they are not the default structure for
 an entire episode. A motivated coverage cut or reverse angle is valid filmmaking. Do not ban cuts,
 force static cameras, or invent dialogue solely to satisfy limitations seen in an earlier run.
+When returning from a prop-only insert to a known person or a new angle, use an approved setup
+keyframe when the tail no longer contains the face or room geometry needed for continuity.
+If off-screen speech makes the model invent a speaker, age a pupil or swap costumes, change to
+visible-speaker coverage or a shared master instead of repeatedly rerolling the same failed setup.
 
 ## GPT Image execution and asset handoff
 
@@ -85,6 +89,9 @@ entire shot when a small edit can preserve the accepted staging. Inspect the res
 Use an API/CLI image path only if the user explicitly chooses it. Consult the installed `imagegen`
 skill's bundled CLI instructions instead of building a second API runner. Never silently substitute
 a model or assume that ChatGPT image access provides API billing or an API key.
+Honor an explicitly selected API path without silently switching back to built-in image generation.
+Keep credentials out of prompts, repository files, command-line arguments and logs. Record the API
+model and request id; a built-in tool that does not report its model version cannot prove parity.
 
 ## Canonical project and commands
 
@@ -160,6 +167,16 @@ review practices. Keep these distinctions clear:
   state and joins; describe results as reviewed only when the media was actually viewed.
 - Keep review previews clean. Add subtitles, titles and sound finishing in post as requested.
   GPT Image may generate cover art directly; there is no need to render a silent video for a cover.
+
+## Requested covers and release titles
+
+For cover or release work, read [references/covers-and-publishing.md](references/covers-and-publishing.md).
+Generate the artwork/type with the selected GPT Image execution path, use approved cast references,
+and check series-name legibility at thumbnail size while following the hierarchy in the user's brief.
+Export only the requested aspect ratios. The pixel-verified PNG exporter is `scripts/drama.py cover`
+or `scripts/covers.py`; default 4:3, no redraw or video-service requirement.
+Treat cover copy and publication titles as independent fields. A user's choice of one aspect or
+API mode is a project preference, not a universal restriction on other projects.
 
 ## Scope of bundled tools
 

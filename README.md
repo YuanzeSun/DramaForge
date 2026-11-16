@@ -18,7 +18,10 @@ python bin/drama.py --help
 
 The image stage uses the conversation's built-in `image_gen` tool; it requires no OpenAI API key.
 Python exports image jobs and imports results. It does **not** impersonate the conversation tool or
-silently call a separately billed image API. MiniMax requires a running compatible LightX2V server
+silently call a separately billed image API. An explicit user request can select the OpenAI Image
+API instead; ordinary HTTPS requests work without installing an SDK. Record the requested model,
+request id and execution mode, and do not assume an unreported built-in backend is the same version.
+MiniMax requires a running compatible LightX2V server
 with a shared filesystem. The toolkit does not launch or stop accelerator services implicitly.
 
 `bin/launch_server.py` records the owning user, configuration, port and process start time.
@@ -40,6 +43,25 @@ python bin/drama.py --project /path/to/new/project render --episode ep01 --dry-r
 python bin/drama.py --project /path/to/new/project render --episode ep01 --run take01   --deadline 2026-11-15T22:00+08:00 --preview-every
 python bin/drama.py --project /path/to/new/project stitch --episode ep01 --run take01
 ```
+
+## Covers and publishing
+
+Generate the cover artwork and Chinese typography with GPT Image, using approved cast references.
+Export only the formats requested by the user. `cover` defaults to one **4:3 PNG** and does not start
+a video service, call an image API, resize pixels or redraw text:
+
+```bash
+python bin/drama.py cover --episode ep01 \
+  --source /path/to/covers/masters/ep01.png --out /path/to/covers/4x3/ep01.png \
+  --record /path/to/covers/review/ep01-export.json
+```
+
+`bin/make_cover.py` is a launcher for the same exporter. An optional `--aspect W:H` or
+`--crop X Y WIDTH HEIGHT` selects an exact crop; `--overwrite` explicitly replaces a current cover.
+Each export records source/output hashes and verifies every pixel against its source region.
+
+Cover copy and upload titles are separate editorial fields: a brief visual hook can complement
+a longer story or emotional hook. See [cover and release workflow](skills/continuous-video-drama/references/covers-and-publishing.md).
 
 `prepare` writes dependency-ordered `image-jobs.json` under the project. Complete each character or
 set reference before generating its consumers; run `prepare` again to refresh reference paths.
@@ -71,6 +93,8 @@ New projects can use the examples and format reference directly.
 - [Skill](skills/continuous-video-drama/SKILL.md): the production workflow and tool boundaries.
 - [Project format](skills/continuous-video-drama/references/project-format.md): assets and plans.
 - [Directing](skills/continuous-video-drama/references/directing.md): continuity, dialogue and review.
+- [Covers and publishing](skills/continuous-video-drama/references/covers-and-publishing.md): aspect ratios,
+  series-name readability, independently written upload titles and execution provenance.
 - `skills/continuous-video-drama/scripts/`: self-contained current CLI and optional utilities.
 - `bin/drama.py`: repository launcher for the same CLI.
 - `examples/`: project/plan examples and an 8-card inference configuration.
