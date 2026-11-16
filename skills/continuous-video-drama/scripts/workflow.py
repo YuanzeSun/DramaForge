@@ -237,7 +237,7 @@ def migrate(source, destination):
         plan["version"] = 2
         write(destination / "episodes" / ep / "plan.json", plan)
     write(destination / "project.json", {"version": 2, "name": source.name, "endpoint": "http://127.0.0.1:8001",
-        "image_provider": "gpt-image", "image_execution": "built-in", "size": [1344, 768], "fps": 24,
+        "image_provider": "gpt-image", "image_execution": "session-selected", "size": [1344, 768], "fps": 24,
         "output": "renders", "style": "Live-action Chinese drama, natural cinematic lighting, restrained believable acting."})
     write(destination / "cast.json", book)
     write(destination / "assets.json", {"version": 2, "assets": assets})

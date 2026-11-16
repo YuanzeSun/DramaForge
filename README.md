@@ -16,11 +16,12 @@ python -m pip install -r requirements.txt
 python bin/drama.py --help
 ```
 
-The image stage uses the conversation's built-in `image_gen` tool; it requires no OpenAI API key.
-Python exports image jobs and imports results. It does **not** impersonate the conversation tool or
-silently call a separately billed image API. An explicit user request can select the OpenAI Image
-API instead; ordinary HTTPS requests work without installing an SDK. Record the requested model,
-request id and execution mode, and do not assume an unreported built-in backend is the same version.
+The user selects the image-generation route in the current session: the account's built-in image
+tool or the OpenAI Image API. Session instructions take precedence over saved project settings;
+using either route for a delivery does not make it mandatory for later work. Python exports image
+jobs and imports results. The built-in route needs no OpenAI API key; the API route supports ordinary
+HTTPS requests without an SDK. Record each asset's actual execution mode and any reported model or
+request id. Do not silently switch routes or assume an unreported built-in backend is the same version.
 MiniMax requires a running compatible LightX2V server
 with a shared filesystem. The toolkit does not launch or stop accelerator services implicitly.
 
@@ -35,7 +36,7 @@ that moved into another session, without stopping unrelated servers.
 python bin/drama.py migrate /path/to/current/production /path/to/new/project
 python bin/drama.py --project /path/to/new/project check
 python bin/drama.py --project /path/to/new/project prepare --episode ep01
-# Generate the exported jobs with built-in image_gen, importing references before keyframes.
+# Generate jobs through the route selected in this session; import references before keyframes.
 python bin/drama.py --project /path/to/new/project import-image ep01_01_start /path/to/result.png
 python bin/drama.py --project /path/to/new/project check --episode ep01 --ready
 # Inspect requests without contacting a server, then explicitly render one episode.

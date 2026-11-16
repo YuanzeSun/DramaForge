@@ -12,13 +12,18 @@ It does not upload input images to an arbitrary remote machine.
   "name": "My show",
   "endpoint": "http://127.0.0.1:8001",
   "image_provider": "gpt-image",
-  "image_execution": "built-in",
+  "image_execution": "session-selected",
   "size": [1344, 768],
   "fps": 24,
   "output": "renders",
   "style": "Live-action drama, natural light and believable acting."
 }
 ```
+
+`image_execution: "session-selected"` leaves the image-generation route to the user's current-session
+instructions: account built-in image generation or OpenAI Image API. This field is descriptive;
+the CLI does not invoke either route. Session instructions override saved settings, and each imported
+asset's historical provenance should describe how it was actually generated.
 
 Optional `crop` and `scale` are ffmpeg expressions applied uniformly during assembly. The runner
 uses the server's configured fps; set the server to match `fps` (24 for the provided H3 example).

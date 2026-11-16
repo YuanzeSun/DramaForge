@@ -62,7 +62,10 @@ visible-speaker coverage or a shared master instead of repeatedly rerolling the 
 
 ## GPT Image execution and asset handoff
 
-Use the available built-in `image_gen` tool by default. Consult the `imagegen` skill when available.
+Follow the user's current-session choice between the account's built-in image tool and the OpenAI
+Image API. Session instructions override saved project settings; neither route is mandatory for
+later work merely because it was used before. Keep historical asset provenance unchanged.
+For the built-in route, use the available `image_gen` tool and consult the `imagegen` skill when available.
 No `OPENAI_API_KEY` is needed for this built-in path. This CLI prepares and imports files; a shell
 process cannot directly call the conversation's image tool. Do not claim fully unattended image
 generation from the Python CLI.
@@ -70,7 +73,7 @@ generation from the Python CLI.
 ```bash
 python scripts/drama.py --project /path/to/project prepare --episode ep01
 # Read project/image-jobs.json. Generate the prerequisite references before shot keyframes.
-# Use image_gen with each job's prompt and the relevant reference images.
+# Use the session-selected route with each job's prompt and relevant reference images.
 python scripts/drama.py --project /path/to/project import-image ep01_01_start /path/to/generated.png
 python scripts/drama.py --project /path/to/project check --episode ep01 --ready
 ```
@@ -86,10 +89,10 @@ When repairing an image, state the edit target, each reference's role, the one r
 and invariants: identity, costume, composition, set, lighting and props. Do not regenerate an
 entire shot when a small edit can preserve the accepted staging. Inspect the result before import.
 
-Use an API/CLI image path only if the user explicitly chooses it. Consult the installed `imagegen`
+When the user selects an API/CLI image path in the session, consult the installed `imagegen`
 skill's bundled CLI instructions instead of building a second API runner. Never silently substitute
 a model or assume that ChatGPT image access provides API billing or an API key.
-Honor an explicitly selected API path without silently switching back to built-in image generation.
+Honor the selected route without silently switching between API and built-in image generation.
 Keep credentials out of prompts, repository files, command-line arguments and logs. Record the API
 model and request id; a built-in tool that does not report its model version cannot prove parity.
 
@@ -175,8 +178,8 @@ Generate the artwork/type with the selected GPT Image execution path, use approv
 and check series-name legibility at thumbnail size while following the hierarchy in the user's brief.
 Export only the requested aspect ratios. The pixel-verified PNG exporter is `scripts/drama.py cover`
 or `scripts/covers.py`; default 4:3, no redraw or video-service requirement.
-Treat cover copy and publication titles as independent fields. A user's choice of one aspect or
-API mode is a project preference, not a universal restriction on other projects.
+Treat cover copy and publication titles as independent fields. Aspect preferences follow the
+project brief; the image-generation route follows the user's instructions in the current session.
 
 ## Scope of bundled tools
 

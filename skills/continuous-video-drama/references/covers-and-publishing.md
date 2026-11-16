@@ -46,8 +46,11 @@ uploading or publishing to an external account.
 
 ## Built-in or API execution
 
-Use the built-in image tool by default unless the user has chosen the API. For an explicit API
-choice, use the installed image-generation CLI or the user's requested HTTP workflow. An SDK is
+Follow the user's current-session instructions to choose the account's built-in image tool or the
+OpenAI Image API. Neither route is a repository-wide requirement. Session instructions override
+saved project settings; past generation records describe existing assets, not future routing.
+Do not silently switch routes. For an API choice, use the installed image-generation CLI or the
+user's requested HTTP workflow. An SDK is
 an optional client convenience, not an API requirement. Read `OPENAI_API_KEY` from a trusted local
 environment/secret source; do not hardcode, echo or commit a key. A sample HTTPS edit request is:
 
